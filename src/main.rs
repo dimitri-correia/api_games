@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
 
     // Send the request for the movement action
-    if true {
+    if false {
         let goto = &json!({
             "x": -1,
             "y": 0
@@ -27,15 +27,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Send the request for the fight action
     if false {
-        handle_fight(&headers, &client).await?;
+        handle_action(&headers, &client, Action::Fight).await?;
+    }
+
+    // Send the request for the gathering action
+    if true {
+        handle_action(&headers, &client, Action::Gathering).await?;
     }
 
     Ok(())
 }
 
-async fn handle_fight(headers: &HeaderMap, client: &Client) -> Result<(), Box<dyn Error>> {
+enum Action {
+    Fight,
+    Gathering,
+}
+
+async fn handle_action(headers: &HeaderMap, client: &Client, action: Action) -> Result<(), Box<dyn Error>> {
+    let action = match action {
+        Action::Fight => "fight",
+        Action::Gathering => "gathering",
+    };
     let response = client
-        .post("https://api.artifactsmmo.com/my/dim/action/fight")
+        .post(format!("https://api.artifactsmmo.com/my/dim/action/{}", action))
         .headers(headers.clone())
         .send()
         .await?.text().await?;
