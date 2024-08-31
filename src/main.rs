@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::Client;
 use serde_json::json;
 use std::env;
 use std::error::Error;
@@ -16,6 +17,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
 
     // Send the request for the movement action
+    if false {
+        handle_movement(&headers, &client).await?;
+    }
+
+    // Send the request for the fight action
+    if false {
+        handle_fight(&headers, &client).await?;
+    }
+
+
+    Ok(())
+}
+
+async fn handle_fight(headers: &HeaderMap, client: &Client) -> Result<(), Box<dyn Error>> {
+    let response = client
+        .post("https://api.artifactsmmo.com/my/dim/action/fight")
+        .headers(headers.clone())
+        .send()
+        .await?.text().await?;
+
+    println!("Fight response: {}", response);
+
+    Ok(())
+}
+
+async fn handle_movement(headers: &HeaderMap, client: &Client) -> Result<(), Box<dyn Error>> {
     let response = client
         .post("https://api.artifactsmmo.com/my/dim/action/move")
         .headers(headers.clone())
@@ -24,18 +51,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "y": 1
         }))
         .send()
-        .await?;
+        .await?.text().await?;
 
-    // Send the request for the fight action
-    let response = client
-        .post("https://api.artifactsmmo.com/my/dim/action/fight")
-        .headers(headers)
-        .send()
-        .await?;
-
-    // Handle the response
-    let body = response.text().await?;
-    println!("{}", body);
+    println!("Movement response: {}", response);
 
     Ok(())
 }
