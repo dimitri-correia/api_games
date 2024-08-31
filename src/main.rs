@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::env;
 use std::error::Error;
 
@@ -17,15 +17,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
 
     // Send the request for the movement action
-    if false {
-        handle_movement(&headers, &client).await?;
+    if true {
+        let goto = &json!({
+            "x": -1,
+            "y": 0
+        });
+        handle_movement(&headers, &client, goto).await?;
     }
 
     // Send the request for the fight action
     if false {
         handle_fight(&headers, &client).await?;
     }
-
 
     Ok(())
 }
@@ -42,14 +45,11 @@ async fn handle_fight(headers: &HeaderMap, client: &Client) -> Result<(), Box<dy
     Ok(())
 }
 
-async fn handle_movement(headers: &HeaderMap, client: &Client) -> Result<(), Box<dyn Error>> {
+async fn handle_movement(headers: &HeaderMap, client: &Client, goto: &Value) -> Result<(), Box<dyn Error>> {
     let response = client
         .post("https://api.artifactsmmo.com/my/dim/action/move")
         .headers(headers.clone())
-        .json(&json!({
-            "x": 0,
-            "y": 1
-        }))
+        .json(goto)
         .send()
         .await?.text().await?;
 
