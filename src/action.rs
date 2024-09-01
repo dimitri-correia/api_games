@@ -36,10 +36,11 @@ pub async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
 }
 
 pub async fn handle_action(server: &Server, action: Action, char: &str, mut how_many: i32, json: Option<&Value>) -> Result<(), Box<dyn Error>> {
+    let action = get_action_name(action);
     while how_many > 0 {
         println!("Remaining calls: {}", how_many);
         let mut response = server.client
-            .post(format!("https://api.artifactsmmo.com/my/{}/action/{}", char, get_action_name(action)))
+            .post(format!("https://api.artifactsmmo.com/my/{}/action/{}", char, action))
             .headers(server.headers.clone());
 
         if let Some(json) = json {

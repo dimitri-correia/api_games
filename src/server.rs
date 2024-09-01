@@ -1,14 +1,14 @@
-use std::env;
 use dotenv::dotenv;
-use reqwest::Client;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::Client;
+use std::env;
 
 pub struct Server {
     pub client: Client,
     pub headers: HeaderMap,
 }
 
-pub fn create_client_and_headers() -> Server {
+pub fn create_server() -> Server {
     // Load the .env file
     dotenv().ok();
 
@@ -22,7 +22,7 @@ pub fn create_client_and_headers() -> Server {
     );
 
     // return client and headers
-    Server::new(Client::new(), headers)
+    Server { client: Client::new(), headers }
 }
 
 fn get_token() -> String {
