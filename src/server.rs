@@ -3,6 +3,7 @@ use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYP
 use reqwest::Client;
 use std::env;
 
+#[derive(Clone)]
 pub struct Server {
     pub client: Client,
     pub headers: HeaderMap,
