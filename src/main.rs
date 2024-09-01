@@ -27,12 +27,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Send the request for the fight action
     if false {
-        handle_action(&headers, &client, Action::Fight).await?;
+        handle_action(&headers, &client, Action::Fight, 1).await?;
     }
 
     // Send the request for the gathering action
     if true {
-        handle_action(&headers, &client, Action::Gathering).await?;
+        handle_action(&headers, &client, Action::Gathering, 10).await?;
     }
 
     Ok(())
@@ -43,20 +43,41 @@ enum Action {
     Gathering,
 }
 
-async fn handle_action(headers: &HeaderMap, client: &Client, action: Action) -> Result<(), Box<dyn Error>> {
+async fn handle_action(headers: &HeaderMap, client: &Client, action: Action, mut how_many: i32) -> Result<(), Box<dyn Error>> {
     let action = match action {
         Action::Fight => "fight",
         Action::Gathering => "gathering",
     };
-    let response = client
-        .post(format!("https://api.artifactsmmo.com/my/dim/action/{}", action))
-        .headers(headers.clone())
-        .send()
-        .await?.text().await?;
 
-    println!("Fight response: {}", response);
+    while how_many > 0 {
+        println!("Remaining calls: {}", how_many);
+        let response = client
+            .post(format!("https://api.artifactsmmo.com/my/dim/action/{}", action))
+            .headers(headers.clone())
+            .send()
+            .await?;
+
+        let cooldown = extract_cooldown(&response.text().await?).await?;
+        println!("Wait: {}s", cooldown);
+        tokio::time::sleep(tokio::time::Duration::from_secs_f32(cooldown)).await;
+
+        how_many -= 1;
+    }
 
     Ok(())
+}
+
+async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
+    let parsed: Value = serde_json::from_str(body).expect("Failed to parse JSON");
+
+    // Extract the remaining_seconds field from the cooldown object
+    if let Some(value) = parsed["data"]["cooldown"]["remaining_seconds"].as_f64() {
+        // Convert the found value to f32
+        return Ok(value as f32);
+    }
+
+    // If the float value wasn't found, return an error
+    Err("Failed to extract the cooldown value".into())
 }
 
 async fn handle_movement(headers: &HeaderMap, client: &Client, goto: &Value) -> Result<(), Box<dyn Error>> {
