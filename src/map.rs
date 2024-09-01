@@ -23,13 +23,13 @@ struct Content {
     code: String,
 }
 
-#[derive(Debug)]
-struct Position {
-    x: i32,
-    y: i32,
+#[derive(Debug, Clone)]
+pub struct Position {
+    pub x: i32,
+    pub y: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Map {
     pub monster: HashMap<String, Vec<Position>>,
     pub resource: HashMap<String, Vec<Position>>,
@@ -40,37 +40,7 @@ pub struct Map {
 }
 
 pub async fn generate_map(server: &Server) -> Result<Map, Box<dyn Error>> {
-    let mut page = 1;
-    let mut all_data = Vec::new();
-
-    // Collect all map data from the API
-    loop {
-        let mut params = HashMap::new();
-        params.insert("size", "100");
-        let p = page.to_string();
-        params.insert("page", &*p);
-
-        let response = server
-            .client
-            .get("https://api.artifactsmmo.com/maps")
-            .query(&params)
-            .headers(server.headers.clone())
-            .send()
-            .await?;
-
-        let map_data: MapData = response.json().await?;
-
-        // Collect all data
-        all_data.extend(map_data.data);
-
-        // Check if we've reached the last page
-        if page == map_data.pages {
-            break;
-        }
-
-        // Move to the next page
-        page += 1;
-    }
+    let all_data = collect_from_api(server).await?;
 
     // Filter and classify entries into respective categories
     let mut monster = HashMap::new();
@@ -121,4 +91,39 @@ pub async fn generate_map(server: &Server) -> Result<Map, Box<dyn Error>> {
     };
 
     Ok(map)
+}
+
+async fn collect_from_api(server: &Server) -> Result<Vec<MapEntry>, Box<dyn Error>> {
+    let mut page = 1;
+    let mut all_data = Vec::new();
+
+    // Collect all map data from the API
+    loop {
+        let mut params = HashMap::new();
+        params.insert("size", "100");
+        let p = page.to_string();
+        params.insert("page", &*p);
+
+        let response = server
+            .client
+            .get("https://api.artifactsmmo.com/maps")
+            .query(&params)
+            .headers(server.headers.clone())
+            .send()
+            .await?;
+
+        let map_data: MapData = response.json().await?;
+
+        // Collect all data
+        all_data.extend(map_data.data);
+
+        // Check if we've reached the last page
+        if page == map_data.pages {
+            break;
+        }
+
+        // Move to the next page
+        page += 1;
+    }
+    Ok(all_data)
 }
