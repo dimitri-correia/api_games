@@ -1,20 +1,20 @@
 mod action;
 mod server;
 mod task;
-mod r#move;
+mod map;
 
 use crate::action::{handle_action, Action};
 use crate::server::create_server;
 use serde_json::json;
 use std::error::Error;
-use crate::r#move::generate_map;
+use crate::map::generate_map;
 use crate::task::{handle_task, Task};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let server = create_server();
 
-    generate_map(&server).await?;
+    let map = generate_map(&server).await?;
 
     // Send the request for the movement action
     // if false {
