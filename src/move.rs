@@ -82,7 +82,6 @@ pub async fn generate_map(server: &Server) -> Result<Map, Box<dyn Error>> {
 
     for entry in all_data {
         if let Some(content) = entry.content {
-            println!("{}: ({}, {})", content.code, entry.x, entry.y);
             let position = Position { x: entry.x, y: entry.y };
 
             match content.content_type.as_str() {
