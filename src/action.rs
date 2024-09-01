@@ -38,7 +38,7 @@ pub async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
 pub async fn handle_action(server: &Server, action: Action, char: &str, mut how_many: i32, json: Option<&Value>) -> Result<(), Box<dyn Error>> {
     let action = get_action_name(action);
     while how_many > 0 {
-        println!("[{}] Remaining calls: {}", char, how_many);
+        println!("[{}] Remaining calls of {}: {}", char, action, how_many);
         let mut response = server.client
             .post(format!("https://api.artifactsmmo.com/my/{}/action/{}", char, action))
             .headers(server.headers.clone());
@@ -52,7 +52,7 @@ pub async fn handle_action(server: &Server, action: Action, char: &str, mut how_
             .await?;
 
         let cooldown = extract_cooldown(&response.text().await?).await?;
-        println!("[{}] Wait: {}s", char, cooldown);
+        println!("[{}] Wait for {}: {}s", char, action, cooldown);
         tokio::time::sleep(tokio::time::Duration::from_secs_f32(cooldown)).await;
 
         how_many -= 1;
