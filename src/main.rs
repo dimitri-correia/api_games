@@ -1,20 +1,17 @@
-use dotenv::dotenv;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+mod action;
+mod server;
+
+use crate::action::{get_action_name, Action};
+use crate::server::create_client_and_headers;
+use reqwest::header::HeaderMap;
 use reqwest::Client;
 use serde_json::{json, Value};
-use std::env;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // Load the .env file
-    dotenv().ok();
-
-    // Create headers
-    let headers = create_headers();
-
-    // Create the client
-    let client = reqwest::Client::new();
+    // Create client and headers
+    let (client, headers) = create_client_and_headers();
 
     // Send the request for the movement action
     if false {
@@ -80,25 +77,7 @@ async fn handle_get_task(headers: &HeaderMap, client: &Client) -> Result<(), Box
     Ok(())
 }
 
-enum Action {
-    Move,
-    Fight,
-    Gathering,
-    Unequip,
-    Equip,
-    Craft,
-}
 
-fn get_action_name(action: Action) -> &'static str {
-    match action {
-        Action::Fight => "fight",
-        Action::Gathering => "gathering",
-        Action::Move => "move",
-        Action::Unequip => "unequip",
-        Action::Equip => "equip",
-        Action::Craft => "crafting",
-    }
-}
 
 async fn handle_action(headers: &HeaderMap, client: &Client, action: Action, mut how_many: i32) -> Result<(), Box<dyn Error>> {
     let action = get_action_name(action);
@@ -151,17 +130,3 @@ async fn handle_action_with_json(headers: &HeaderMap, client: &Client, action: A
     Ok(())
 }
 
-fn create_headers() -> HeaderMap {
-    let mut headers = HeaderMap::new();
-    headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {}", get_token())).unwrap(),
-    );
-    headers
-}
-
-fn get_token() -> String {
-    env::var("token").expect("Token not found in .env file")
-}
