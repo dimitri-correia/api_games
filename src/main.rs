@@ -1,7 +1,7 @@
 mod action;
 mod server;
 
-use crate::action::{get_action_name, Action};
+use crate::action::{extract_cooldown, get_action_name, Action};
 use crate::server::create_client_and_headers;
 use reqwest::header::HeaderMap;
 use reqwest::Client;
@@ -24,12 +24,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Send the request for the fight action
     if true {
-        handle_action(&headers, &client, Action::Fight, 300).await?;
+        handle_action(&headers, &client, Action::Fight, "dim", 300).await?;
     }
 
     // Send the request for the gathering action
     if false {
-        handle_action(&headers, &client, Action::Gathering, 10).await?;
+        handle_action(&headers, &client, Action::Gathering, "dim", 10).await?;
     }
 
     // Send the request to unequip
@@ -79,13 +79,13 @@ async fn handle_get_task(headers: &HeaderMap, client: &Client) -> Result<(), Box
 
 
 
-async fn handle_action(headers: &HeaderMap, client: &Client, action: Action, mut how_many: i32) -> Result<(), Box<dyn Error>> {
+async fn handle_action(headers: &HeaderMap, client: &Client, action: Action, char: &str, mut how_many: i32) -> Result<(), Box<dyn Error>> {
     let action = get_action_name(action);
 
     while how_many > 0 {
         println!("Remaining calls: {}", how_many);
         let response = client
-            .post(format!("https://api.artifactsmmo.com/my/dim/action/{}", action))
+            .post(format!("https://api.artifactsmmo.com/my/{}/action/{}", char, action))
             .headers(headers.clone())
             .send()
             .await?;
@@ -100,20 +100,6 @@ async fn handle_action(headers: &HeaderMap, client: &Client, action: Action, mut
     Ok(())
 }
 
-
-
-async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
-    let parsed: Value = serde_json::from_str(body).expect("Failed to parse JSON");
-
-    // Extract the remaining_seconds field from the cooldown object
-    if let Some(value) = parsed["data"]["cooldown"]["remaining_seconds"].as_f64() {
-        // Convert the found value to f32
-        return Ok(value as f32);
-    }
-
-    // If the float value wasn't found, return an error
-    Err("Failed to extract the cooldown value".into())
-}
 
 async fn handle_action_with_json(headers: &HeaderMap, client: &Client, action: Action, json: &Value) -> Result<(), Box<dyn Error>> {
     let action = get_action_name(action);
