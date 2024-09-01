@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Send the request for the fight action
     if true {
-        handle_action(&headers, &client, Action::Fight, 10).await?;
+        handle_action(&headers, &client, Action::Fight, 300).await?;
     }
 
     // Send the request for the gathering action
@@ -59,6 +59,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
         });
         handle_action_with_json(&headers, &client, Action::Equip, equip).await?;
     }
+
+    // Send get task action
+    if false {
+        handle_get_task(&headers, &client).await?;
+    }
+
+    Ok(())
+}
+
+async fn handle_get_task(headers: &HeaderMap, client: &Client) -> Result<(), Box<dyn Error>> {
+    let response = client
+        .post(format!("https://api.artifactsmmo.com/my/dim/action/task/{}", "complete"))
+        .headers(headers.clone())
+        .send()
+        .await?;
+
+    println!("Task response: {}", response.text().await?);
 
     Ok(())
 }
