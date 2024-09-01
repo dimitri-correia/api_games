@@ -22,32 +22,69 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "x": -1,
             "y": 0
         });
-        handle_movement(&headers, &client, goto).await?;
+        handle_action_with_json(&headers, &client, Action::Move, goto).await?;
     }
 
     // Send the request for the fight action
-    if false {
-        handle_action(&headers, &client, Action::Fight, 1).await?;
+    if true {
+        handle_action(&headers, &client, Action::Fight, 10).await?;
     }
 
     // Send the request for the gathering action
-    if true {
+    if false {
         handle_action(&headers, &client, Action::Gathering, 10).await?;
+    }
+
+    // Send the request to unequip
+    if false{
+        let unequip = &json!({
+            "slot": "weapon"
+        });
+        handle_action_with_json(&headers, &client, Action::Unequip, unequip).await?;
+    }
+
+    // Send the request to craft
+    if false {
+        let craft = &json!({
+            "code": "wooden_staff"
+        });
+        handle_action_with_json(&headers, &client, Action::Craft, craft).await?;
+    }
+
+    // Send the request to equip
+    if false {
+        let equip = &json!({
+            "slot": "weapon",
+            "code": "wooden_staff"
+        });
+        handle_action_with_json(&headers, &client, Action::Equip, equip).await?;
     }
 
     Ok(())
 }
 
 enum Action {
+    Move,
     Fight,
     Gathering,
+    Unequip,
+    Equip,
+    Craft,
+}
+
+fn get_action_name(action: Action) -> &'static str {
+    match action {
+        Action::Fight => "fight",
+        Action::Gathering => "gathering",
+        Action::Move => "move",
+        Action::Unequip => "unequip",
+        Action::Equip => "equip",
+        Action::Craft => "crafting",
+    }
 }
 
 async fn handle_action(headers: &HeaderMap, client: &Client, action: Action, mut how_many: i32) -> Result<(), Box<dyn Error>> {
-    let action = match action {
-        Action::Fight => "fight",
-        Action::Gathering => "gathering",
-    };
+    let action = get_action_name(action);
 
     while how_many > 0 {
         println!("Remaining calls: {}", how_many);
@@ -67,6 +104,8 @@ async fn handle_action(headers: &HeaderMap, client: &Client, action: Action, mut
     Ok(())
 }
 
+
+
 async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
     let parsed: Value = serde_json::from_str(body).expect("Failed to parse JSON");
 
@@ -80,11 +119,13 @@ async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
     Err("Failed to extract the cooldown value".into())
 }
 
-async fn handle_movement(headers: &HeaderMap, client: &Client, goto: &Value) -> Result<(), Box<dyn Error>> {
+async fn handle_action_with_json(headers: &HeaderMap, client: &Client, action: Action, json: &Value) -> Result<(), Box<dyn Error>> {
+    let action = get_action_name(action);
+
     let response = client
-        .post("https://api.artifactsmmo.com/my/dim/action/move")
+        .post(format!("https://api.artifactsmmo.com/my/dim/action/{}", action))
         .headers(headers.clone())
-        .json(goto)
+        .json(json)
         .send()
         .await?.text().await?;
 
