@@ -1,5 +1,6 @@
-use std::error::Error;
+use crate::server::Server;
 use serde_json::Value;
+use std::error::Error;
 
 pub enum Action {
     Move,
@@ -32,4 +33,29 @@ pub async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
 
     // If the float value wasn't found, return an error
     Err("Failed to extract the cooldown value".into())
+}
+
+pub async fn handle_action(server: &Server, action: Action, char: &str, mut how_many: i32, json: Option<&Value>) -> Result<(), Box<dyn Error>> {
+    while how_many > 0 {
+        println!("Remaining calls: {}", how_many);
+        let mut response = server.client
+            .post(format!("https://api.artifactsmmo.com/my/{}/action/{}", char, get_action_name(action)))
+            .headers(server.headers.clone());
+
+        if let Some(json) = json {
+            response = response.json(json);
+        }
+
+        let response = response
+            .send()
+            .await?;
+
+        let cooldown = extract_cooldown(&response.text().await?).await?;
+        println!("Wait: {}s", cooldown);
+        tokio::time::sleep(tokio::time::Duration::from_secs_f32(cooldown)).await;
+
+        how_many -= 1;
+    }
+
+    Ok(())
 }
