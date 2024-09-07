@@ -1,32 +1,98 @@
 use crate::server::Server;
-use reqwest::{Error, Response};
+use reqwest::Error;
+use serde::Deserialize;
 use serde_json::Value;
 
-pub async fn get_char_max_items(server: &Server, char: &str) -> Result<u32, Error> {
-    let infos = get_char_infos(server, char).await?;
-    let char_infos: Value = serde_json::from_str(&infos.text().await?).unwrap();
-
-    let max_items = char_infos["data"]["inventory_max_items"]
-        .as_u64().unwrap() as u32;
-
-    Ok(max_items)
+#[derive(Debug, Deserialize)]
+struct InventoryItem {
+    slot: u8,
+    code: String,
+    quantity: u32,
 }
 
-pub async fn get_char_all_items(server: &Server, char: &str) -> Result<Vec<Value>, Error> {
-    let infos = get_char_infos(server, char).await?;
-    let char_infos: Value = serde_json::from_str(&infos.text().await?).unwrap();
-
-    let inventory = char_infos["data"]["inventory"]
-        .as_array().unwrap().to_vec();
-
-    Ok(inventory)
+#[derive(Debug, Deserialize)]
+pub struct CharacterData {
+    name: String,
+    skin: String,
+    level: u32,
+    xp: u32,
+    max_xp: u32,
+    achievements_points: u32,
+    gold: u32,
+    speed: u32,
+    mining_level: u32,
+    mining_xp: u32,
+    mining_max_xp: u32,
+    woodcutting_level: u32,
+    woodcutting_xp: u32,
+    woodcutting_max_xp: u32,
+    fishing_level: u32,
+    fishing_xp: u32,
+    fishing_max_xp: u32,
+    weaponcrafting_level: u32,
+    weaponcrafting_xp: u32,
+    weaponcrafting_max_xp: u32,
+    gearcrafting_level: u32,
+    gearcrafting_xp: u32,
+    gearcrafting_max_xp: u32,
+    jewelrycrafting_level: u32,
+    jewelrycrafting_xp: u32,
+    jewelrycrafting_max_xp: u32,
+    cooking_level: u32,
+    cooking_xp: u32,
+    cooking_max_xp: u32,
+    hp: u32,
+    haste: u32,
+    critical_strike: u32,
+    stamina: u32,
+    attack_fire: u32,
+    attack_earth: u32,
+    attack_water: u32,
+    attack_air: u32,
+    dmg_fire: u32,
+    dmg_earth: u32,
+    dmg_water: u32,
+    dmg_air: u32,
+    res_fire: u32,
+    res_earth: u32,
+    res_water: u32,
+    res_air: u32,
+    x: i32,
+    y: i32,
+    pub cooldown: u32,
+    cooldown_expiration: String,
+    weapon_slot: String,
+    shield_slot: String,
+    helmet_slot: String,
+    body_armor_slot: String,
+    leg_armor_slot: String,
+    boots_slot: String,
+    ring1_slot: String,
+    ring2_slot: String,
+    amulet_slot: String,
+    artifact1_slot: String,
+    artifact2_slot: String,
+    artifact3_slot: String,
+    consumable1_slot: String,
+    consumable1_slot_quantity: u32,
+    consumable2_slot: String,
+    consumable2_slot_quantity: u32,
+    task: String,
+    task_type: String,
+    task_progress: u32,
+    task_total: u32,
+    pub inventory_max_items: u32,
+    pub inventory: Vec<InventoryItem>,
 }
 
-async fn get_char_infos(server: &Server, char: &str) -> Result<Response, Error> {
+pub async fn get_char_infos(server: &Server, char: &str) -> Result<CharacterData, Error> {
     server
         .client
         .get(format!("https://api.artifactsmmo.com/characters/{}", char))
         .headers(server.headers.clone())
         .send()
+        .await?
+        ["data"]
+        .json::<CharacterData>()
         .await
 }
