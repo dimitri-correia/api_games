@@ -1,5 +1,6 @@
 use crate::server::Server;
 use serde::Deserialize;
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize)]
 pub struct InventoryItem {
@@ -10,7 +11,7 @@ pub struct InventoryItem {
 
 #[derive(Debug, Deserialize)]
 pub struct CharacterData {
-    // name: String,
+    name: String,
     // skin: String,
     level: u32,
     xp: u32,
@@ -87,6 +88,10 @@ pub struct CharacterData {
 struct CharacterResponse {
     data: CharacterData,
 }
+#[derive(Debug, Deserialize)]
+struct AllCharactersResponse {
+    data: Vec<CharacterData>,
+}
 
 pub async fn get_char_infos(server: &Server, character: &str) -> CharacterData {
     server.create_request(format!("characters/{}", character), None, None)
@@ -96,4 +101,23 @@ pub async fn get_char_infos(server: &Server, character: &str) -> CharacterData {
         .json::<CharacterResponse>()
         .await.expect("Error parsing JSON")
         .data
+}
+
+pub async fn get_all_chars_infos(server: &Server) -> HashMap<String, CharacterData> {
+    let response = server
+        .create_request("my/characters".to_string(), None, None)
+        .await
+        .send()
+        .await
+        .expect("Error sending request")
+        .json::<AllCharactersResponse>()
+        .await
+        .expect("Error parsing JSON");
+
+    // Convert the Vec<CharacterData> into a HashMap, using character name as the key
+    response
+        .data
+        .into_iter()
+        .map(|char_data| (char_data.name.clone(), char_data))
+        .collect()
 }
