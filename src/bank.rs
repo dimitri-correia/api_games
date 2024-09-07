@@ -2,7 +2,7 @@ use crate::action::handle_action_with_cooldown;
 use crate::server::Server;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use crate::char::get_char_infos;
+use crate::character::get_char_infos;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct DepositItem {

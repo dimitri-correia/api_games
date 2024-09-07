@@ -2,7 +2,7 @@ mod action;
 mod server;
 mod task;
 mod map;
-mod char;
+mod character;
 mod bank;
 mod movement;
 mod utils;
@@ -49,7 +49,7 @@ async fn action_for_char(char: &str, server_clone: Arc<Server>, map: Arc<Result<
     let map = &*map;
     loop {
         // wait cooldown if any
-        let cooldown = char::get_char_infos(&server_clone, char).await.unwrap().cooldown as f32;
+        let cooldown = character::get_char_infos(&server_clone, char).await.unwrap().cooldown as f32;
         handle_cooldown(char, "cooldown remaining", cooldown).await;
 
         // move to bank
@@ -59,7 +59,7 @@ async fn action_for_char(char: &str, server_clone: Arc<Server>, map: Arc<Result<
         bank::deposit_all(&server_clone, char).await;
 
         // get the max item the char can hold
-        let max_item = char::get_char_infos(&server_clone, char).await.unwrap().inventory_max_items;
+        let max_item = character::get_char_infos(&server_clone, char).await.unwrap().inventory_max_items;
 
         // move to resource
         movement::move_to(&server_clone, char, movement::Place::Resource, map).await;

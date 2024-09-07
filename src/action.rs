@@ -1,4 +1,4 @@
-use crate::char::CharacterData;
+use crate::character::CharacterData;
 use crate::server::Server;
 use crate::utils::handle_cooldown;
 use reqwest::RequestBuilder;
