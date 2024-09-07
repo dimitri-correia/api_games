@@ -32,7 +32,7 @@ pub struct Item {
     pub subtype: String,
     pub description: String,
     pub effects: Vec<Effect>,
-    pub craft: Craft,
+    pub craft: Option<Craft>,
 }
 
 #[derive(Deserialize, Debug)]
