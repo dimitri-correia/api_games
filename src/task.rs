@@ -8,7 +8,7 @@ pub enum Task {
     Exchange,
 }
 
-pub fn get_task_name(task: Task) -> &'static str {
+fn get_task_name(task: Task) -> &'static str {
     match task {
         Task::Complete => "complete",
         Task::New => "new",
@@ -17,9 +17,7 @@ pub fn get_task_name(task: Task) -> &'static str {
     }
 }
 pub async fn handle_task(server: &Server, char: &str, task: Task) -> Result<(), Box<dyn Error>> {
-    let response = server.client
-        .post(format!("https://api.artifactsmmo.com/my/{}/action/task/{}", char, get_task_name(task)))
-        .headers(server.headers.clone())
+    let response = server.create_request(format!("my/{}/action/task/{}", char, get_task_name(task)), None, None)
         .send()
         .await?;
 
