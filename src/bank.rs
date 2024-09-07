@@ -2,7 +2,7 @@ use crate::action::handle_action_with_cooldown;
 use crate::server::Server;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use crate::char::get_char_all_items;
+use crate::char::get_char_infos;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct DepositItem {
@@ -20,5 +20,8 @@ async fn deposit_item(server: &Server, char: &str, item_code: &str, quantity: u3
 
 
 pub async fn deposit_all(server: &Server, char: &str) {
-    for i in get_char_all_items(server, char).await.unwrap() {}
+    for i in get_char_infos(server, char).await.unwrap().inventory {
+        println!("Depositing item: {:?}", i);
+    }
+    println!("Depositing all items");
 }
