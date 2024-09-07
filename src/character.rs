@@ -89,10 +89,8 @@ struct CharacterResponse {
 }
 
 pub async fn get_char_infos(server: &Server, character: &str) -> CharacterData {
-    server
-        .client
-        .get(format!("https://api.artifactsmmo.com/characters/{}", character))
-        .headers(server.headers.clone())
+    server.create_request(format!("characters/{}", character), None, None)
+        .await
         .send()
         .await.expect("Error sending request")
         .json::<CharacterResponse>()
