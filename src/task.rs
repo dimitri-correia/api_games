@@ -1,3 +1,4 @@
+use crate::server::RequestMethod::POST;
 use crate::server::Server;
 use std::error::Error;
 
@@ -17,7 +18,7 @@ fn get_task_name(task: Task) -> &'static str {
     }
 }
 pub async fn handle_task(server: &Server, char: &str, task: Task) -> Result<(), Box<dyn Error>> {
-    let response = server.create_request(format!("my/{}/action/task/{}", char, get_task_name(task)), None, None)
+    let response = server.create_request(POST, format!("my/{}/action/task/{}", char, get_task_name(task)), None, None)
         .send()
         .await?;
 

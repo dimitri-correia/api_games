@@ -4,6 +4,7 @@ use crate::utils::handle_cooldown;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
+use crate::server::RequestMethod::POST;
 
 pub enum Action {
     Move,
@@ -35,7 +36,7 @@ pub async fn handle_action_with_cooldown(
     json: Option<&Value>,
 ) -> AllActionResponse {
     let action_name = get_action_name(action);
-    let request = server.create_request(format!("my/{}/action/{}", char, action_name), json, None);
+    let request = server.create_request(POST, format!("my/{}/action/{}", char, action_name), json, None);
 
     // Loop through the calls, stopping before the last one to handle it separately
     while how_many > 1 {
@@ -62,7 +63,7 @@ struct ActionResponse {
 }
 
 #[derive(Debug, Deserialize)]
-struct AllActionResponse {
+pub struct AllActionResponse {
     // to get directly the cooldown remaining
     #[serde(deserialize_with = "deserialize_cooldown")]
     cooldown: f32,

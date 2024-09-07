@@ -11,6 +11,12 @@ pub struct Server {
     pub headers: HeaderMap,
 }
 
+#[derive(Debug)]
+pub enum RequestMethod {
+    GET,
+    POST,
+}
+
 pub fn create_server() -> Server {
     // Load the .env file
     dotenv().ok();
@@ -32,12 +38,17 @@ pub fn create_server() -> Server {
 }
 
 impl Server {
-    pub fn create_request(&self, link: String, json: Option<&Value>, query: Option<HashMap<&str, &str>>)
+    pub fn create_request(&self, request_method: RequestMethod, link: String, json: Option<&Value>, query: Option<HashMap<&str, &str>>)
         -> RequestBuilder {
         let url = format!("https://api.artifactsmmo.com/{}", link);
 
-        let mut request = self.client
-            .post(url)
+        let mut request =
+            match request_method {
+                RequestMethod::GET => self.client.get(url),
+                RequestMethod::POST => self.client.post(url),
+            };
+
+        request = request
             .headers(self.headers.clone());
 
         if let Some(json) = json {

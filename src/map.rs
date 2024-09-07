@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
+use crate::server::RequestMethod::GET;
 
 #[derive(Deserialize, Debug)]
 struct MapData {
@@ -40,8 +41,8 @@ pub struct Map {
     pub tasks_master: HashMap<String, Vec<Position>>,
 }
 
-pub async fn generate_map(server: Arc<Server>) -> Result<Map, Box<dyn Error>> {
-    let all_data = collect_from_api(&*server).await?;
+pub async fn generate_map(server: Arc<Server>) -> Map {
+    let all_data = collect_from_api(&*server).await.unwrap();
 
     // Filter and classify entries into respective categories
     let mut monster = HashMap::new();
@@ -82,16 +83,14 @@ pub async fn generate_map(server: Arc<Server>) -> Result<Map, Box<dyn Error>> {
     }
 
     // Create the Map struct with the collected data
-    let map = Map {
+    Map {
         monster,
         resource,
         workshop,
         bank,
         grand_exchange,
         tasks_master,
-    };
-
-    Ok(map)
+    }
 }
 
 async fn collect_from_api(server: &Server) -> Result<Vec<MapEntry>, Box<dyn Error>> {
@@ -105,7 +104,7 @@ async fn collect_from_api(server: &Server) -> Result<Vec<MapEntry>, Box<dyn Erro
         let p = page.to_string();
         params.insert("page", &*p);
 
-        let response = server.create_request("maps".to_string(), None, Some(params))
+        let response = server.create_request(GET, "maps".to_string(), None, Some(params))
             .send()
             .await?;
 

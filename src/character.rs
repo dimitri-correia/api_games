@@ -1,6 +1,7 @@
 use crate::server::Server;
 use serde::Deserialize;
 use std::collections::HashMap;
+use crate::server::RequestMethod::POST;
 
 #[derive(Debug, Deserialize)]
 pub struct InventoryItem {
@@ -94,8 +95,7 @@ struct AllCharactersResponse {
 }
 
 pub async fn get_char_infos(server: &Server, character: &str) -> CharacterData {
-    server.create_request(format!("characters/{}", character), None, None)
-        .await
+    server.create_request(POST, format!("characters/{}", character), None, None)
         .send()
         .await.expect("Error sending request")
         .json::<CharacterResponse>()
@@ -105,8 +105,7 @@ pub async fn get_char_infos(server: &Server, character: &str) -> CharacterData {
 
 pub async fn get_all_chars_infos(server: &Server) -> HashMap<String, CharacterData> {
     let response = server
-        .create_request("my/characters".to_string(), None, None)
-        .await
+        .create_request(POST, "my/characters".to_string(), None, None)
         .send()
         .await
         .expect("Error sending request")
