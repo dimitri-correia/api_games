@@ -18,7 +18,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let server = Arc::new(server::create_server());
 
     let characters = character::get_all_chars_infos(&server).await;
-
     let game_info = get_game_info(&server).await;
 
     let mut handles = Vec::new();
@@ -36,7 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Wait for all tasks to complete
     for handle in handles {
-        handle.await.unwrap();
+        handle.await.unwrap_or(());
     }
 
     Ok(())
