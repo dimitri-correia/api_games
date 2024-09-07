@@ -37,7 +37,7 @@ pub struct MonsterPage {
 }
 
 
-async fn get_all_monsters(server: &Server) -> Vec<Monster> {
+pub async fn get_all_monsters(server: &Server) -> Vec<Monster> {
     let mut page = 1;
     let mut all_data = Vec::new();
 
