@@ -35,14 +35,14 @@ pub async fn handle_action_with_cooldown(
     json: Option<&Value>,
 ) -> AllActionResponse {
     let action_name = get_action_name(action);
-    let request = create_request(server, char, json, action_name).await;
+    let request = server.create_request(format!("my/{}/action/{}", char, action_name), json, None);
 
     // Loop through the calls, stopping before the last one to handle it separately
     while how_many > 1 {
         println!("[{}] Remaining calls of {}: {}", char, action_name, how_many);
 
         // Make the request and handle cooldown
-        let response = send_request(request).await;
+        let response = send_request(request.try_clone().unwrap()).await;
         handle_cooldown(char, &action_name, response.cooldown).await;
 
         how_many -= 1;
@@ -78,20 +78,6 @@ where
         remaining_seconds: f32,
     }
     Ok(Cooldown::deserialize(deserializer)?.remaining_seconds)
-}
-fn create_request(server: &Server, char: &str, json: Option<&Value>, action: &str)
-                  -> RequestBuilder {
-    let url = format!("https://api.artifactsmmo.com/my/{}/action/{}", char, action);
-
-    let mut request = server.client
-        .post(url)
-        .headers(server.headers.clone());
-
-    if let Some(json) = json {
-        request = request.json(json);
-    }
-
-    request
 }
 
 async fn send_request(request: RequestBuilder) -> AllActionResponse {
