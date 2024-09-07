@@ -7,6 +7,9 @@ use std::sync::Arc;
 pub async fn action_for_char(character: CharacterData, server_clone: Arc<Server>, game_info: Arc<GameInfo>) {
     let mut character = character;
 
+    // if events
+    // handle_events(&server_clone, &character).await;
+
     loop {
         // wait cooldown if any
         // let cooldown_expiration = &character.cooldown_expiration;

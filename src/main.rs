@@ -10,6 +10,7 @@ mod routines;
 mod monster;
 mod items;
 mod resources;
+mod events;
 
 use std::error::Error;
 use std::sync::Arc;
