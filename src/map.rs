@@ -105,11 +105,7 @@ async fn collect_from_api(server: &Server) -> Result<Vec<MapEntry>, Box<dyn Erro
         let p = page.to_string();
         params.insert("page", &*p);
 
-        let response = server
-            .client
-            .get("https://api.artifactsmmo.com/maps")
-            .query(&params)
-            .headers(server.headers.clone())
+        let response = server.create_request("maps".to_string(), None, Some(params))
             .send()
             .await?;
 
