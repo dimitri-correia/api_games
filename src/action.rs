@@ -37,7 +37,7 @@ pub async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
     Err("Failed to extract the cooldown value".into())
 }
 
-pub async fn handle_action(server: &Server, action: Action, char: &str, mut how_many: u32, json: Option<&Value>) -> Result<(), Box<dyn Error>> {
+pub async fn handle_action_with_cooldown(server: &Server, action: Action, char: &str, mut how_many: u32, json: Option<&Value>) -> Result<(), Box<dyn Error>> {
     let action = get_action_name(action);
     while how_many > 0 {
         println!("[{}] Remaining calls of {}: {}", char, action, how_many);

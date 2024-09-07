@@ -1,4 +1,4 @@
-use crate::action::handle_action;
+use crate::action::handle_action_with_cooldown;
 use crate::map::Map;
 use crate::server::Server;
 use serde_json::{json, Value};
@@ -10,7 +10,7 @@ pub enum Place {
 
 pub async fn move_to(server: &Server, char: &str, place: Place, map: &Map) {
     let goto = get_pos(place, map);
-    handle_action(server, crate::action::Action::Move, char, 1, Some(&goto)).await.unwrap()
+    handle_action_with_cooldown(server, crate::action::Action::Move, char, 1, Some(&goto)).await.unwrap()
 }
 
 fn get_pos(place: Place, map: &Map) -> Value {

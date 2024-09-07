@@ -1,4 +1,4 @@
-use crate::action::handle_action;
+use crate::action::handle_action_with_cooldown;
 use crate::server::Server;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -15,7 +15,7 @@ async fn deposit_item(server: &Server, char: &str, item_code: &str, quantity: u3
         code: item_code.to_string(),
         quantity,
     };
-    handle_action(server, crate::action::Action::BankDeposit, char, 1, Some(&json!(item_data))).await.unwrap()
+    handle_action_with_cooldown(server, crate::action::Action::BankDeposit, char, 1, Some(&json!(item_data))).await.unwrap()
 }
 
 

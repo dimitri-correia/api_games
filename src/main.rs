@@ -6,7 +6,7 @@ mod char;
 mod bank;
 mod movement;
 
-use crate::action::{handle_action, Action};
+use crate::action::{handle_action_with_cooldown, Action};
 use crate::map::{generate_map, Map};
 use crate::server::{create_server, Server};
 use std::error::Error;
@@ -46,24 +46,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn action_for_char(char: &str, server_clone: Arc<Server>, map: Arc<Map>) {
     let map = &*map;
     loop {
-        // // move to bank
-        // movement::move_to(&server_clone, char, movement::Place::Bank, map).await;
-        //
-        // // deposit all items
-        // bank::deposit_all(&server_clone, char).await;
-        //
-        // // get the max item the char can hold
-        // let max_item = char::get_char_max_items(&server_clone, char).await.unwrap();
-        //
-        // // move to resource
-        // movement::move_to(&server_clone, char, movement::Place::Resource, map).await;
+        // move to bank
+        movement::move_to(&server_clone, char, movement::Place::Bank, map).await;
+
+        // deposit all items
+        bank::deposit_all(&server_clone, char).await;
+
+        // get the max item the char can hold
+        let max_item = char::get_char_max_items(&server_clone, char).await.unwrap();
+
+        // move to resource
+        movement::move_to(&server_clone, char, movement::Place::Resource, map).await;
 
         // gather resource
         if char.eq("dim") {
-            handle_action(&server_clone, Action::Fight, char, 300, None).await.unwrap();
+            handle_action_with_cooldown(&server_clone, Action::Fight, char, 300, None).await.unwrap();
             continue;
         }
-        handle_action(&server_clone, Action::Gathering, char, 100, None).await.unwrap();
+        handle_action_with_cooldown(&server_clone, Action::Gathering, char, 100, None).await.unwrap();
     }
 }
 
