@@ -2,6 +2,7 @@ use crate::server::Server;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
+use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
 struct MapData {
@@ -39,8 +40,8 @@ pub struct Map {
     pub tasks_master: HashMap<String, Vec<Position>>,
 }
 
-pub async fn generate_map(server: &Server) -> Result<Map, Box<dyn Error>> {
-    let all_data = collect_from_api(server).await?;
+pub async fn generate_map(server: Arc<Server>) -> Result<Map, Box<dyn Error>> {
+    let all_data = collect_from_api(&*server).await?;
 
     // Filter and classify entries into respective categories
     let mut monster = HashMap::new();
