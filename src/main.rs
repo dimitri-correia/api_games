@@ -8,13 +8,11 @@ mod movement;
 mod utils;
 mod routines;
 
-use crate::action::{handle_action_with_cooldown, Action};
-use crate::map::{generate_map, Map};
-use crate::server::{create_server, Server};
+use crate::map::generate_map;
+use crate::routines::action_for_char;
+use crate::server::create_server;
 use std::error::Error;
 use std::sync::Arc;
-use crate::routines::action_for_char;
-use crate::utils::handle_cooldown;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
