@@ -1,6 +1,9 @@
+use crate::char::CharacterData;
 use crate::server::Server;
+use crate::utils::handle_cooldown;
+use reqwest::RequestBuilder;
+use serde::{Deserialize, Deserializer};
 use serde_json::Value;
-use std::error::Error;
 
 pub enum Action {
     Move,
@@ -12,7 +15,7 @@ pub enum Action {
     BankDeposit,
 }
 
-pub fn get_action_name(action: Action) -> &'static str {
+fn get_action_name(action: Action) -> &'static str {
     match action {
         Action::Fight => "fight",
         Action::Gathering => "gathering",
@@ -24,41 +27,78 @@ pub fn get_action_name(action: Action) -> &'static str {
     }
 }
 
-pub async fn extract_cooldown(body: &String) -> Result<f32, Box<dyn Error>> {
-    let parsed: Value = serde_json::from_str(body).expect("Failed to parse JSON");
+pub async fn handle_action_with_cooldown(
+    server: &Server,
+    action: Action,
+    char: &str,
+    mut how_many: u32,
+    json: Option<&Value>,
+) -> AllActionResponse {
+    let action_name = get_action_name(action);
+    let request = create_request(server, char, json, action_name).await;
 
-    // Extract the remaining_seconds field from the cooldown object
-    if let Some(value) = parsed["data"]["cooldown"]["remaining_seconds"].as_f64() {
-        // Convert the found value to f32
-        return Ok(value as f32);
-    }
+    // Loop through the calls, stopping before the last one to handle it separately
+    while how_many > 1 {
+        println!("[{}] Remaining calls of {}: {}", char, action_name, how_many);
 
-    // If the float value wasn't found, return an error
-    Err("Failed to extract the cooldown value".into())
-}
-
-pub async fn handle_action_with_cooldown(server: &Server, action: Action, char: &str, mut how_many: u32, json: Option<&Value>) -> Result<(), Box<dyn Error>> {
-    let action = get_action_name(action);
-    while how_many > 0 {
-        println!("[{}] Remaining calls of {}: {}", char, action, how_many);
-        let mut response = server.client
-            .post(format!("https://api.artifactsmmo.com/my/{}/action/{}", char, action))
-            .headers(server.headers.clone());
-
-        if let Some(json) = json {
-            response = response.json(json);
-        }
-
-        let response = response
-            .send()
-            .await?;
-
-        let cooldown = extract_cooldown(&response.text().await?).await?;
-        println!("[{}] Wait for {}: {}s", char, action, cooldown);
-        tokio::time::sleep(tokio::time::Duration::from_secs_f32(cooldown)).await;
+        // Make the request and handle cooldown
+        let response = send_request(request).await;
+        handle_cooldown(char, &action_name, response.cooldown).await;
 
         how_many -= 1;
     }
 
-    Ok(())
+    // Last call, return the response from the final request
+    let final_response = send_request(request).await;
+    handle_cooldown(char, &action_name, final_response.cooldown).await;
+
+    final_response
 }
+
+
+#[derive(Debug, Deserialize)]
+struct ActionResponse {
+    data: AllActionResponse,
+}
+
+#[derive(Debug, Deserialize)]
+struct AllActionResponse {
+    // to get directly the cooldown remaining
+    #[serde(deserialize_with = "deserialize_cooldown")]
+    cooldown: f32,
+    character_data: CharacterData,
+}
+
+fn deserialize_cooldown<'de, D>(deserializer: D) -> Result<f32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Cooldown {
+        remaining_seconds: f32,
+    }
+    Ok(Cooldown::deserialize(deserializer)?.remaining_seconds)
+}
+fn create_request(server: &Server, char: &str, json: Option<&Value>, action: &str)
+                  -> RequestBuilder {
+    let url = format!("https://api.artifactsmmo.com/my/{}/action/{}", char, action);
+
+    let mut request = server.client
+        .post(url)
+        .headers(server.headers.clone());
+
+    if let Some(json) = json {
+        request = request.json(json);
+    }
+
+    request
+}
+
+async fn send_request(request: RequestBuilder) -> AllActionResponse {
+    request
+        .send()
+        .await.expect("Error sending request")
+        .json::<AllActionResponse>()
+        .await.expect("Error parsing JSON")
+}
+
