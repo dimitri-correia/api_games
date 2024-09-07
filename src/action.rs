@@ -1,10 +1,10 @@
 use crate::character::CharacterData;
+use crate::server::RequestMethod::POST;
 use crate::server::Server;
 use crate::utils::handle_cooldown;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
-use crate::server::RequestMethod::POST;
 
 pub enum Action {
     Move,
@@ -67,7 +67,7 @@ pub struct AllActionResponse {
     // to get directly the cooldown remaining
     #[serde(deserialize_with = "deserialize_cooldown")]
     cooldown: f32,
-    character_data: CharacterData,
+    character: CharacterData,
 }
 
 fn deserialize_cooldown<'de, D>(deserializer: D) -> Result<f32, D::Error>
@@ -85,7 +85,8 @@ async fn send_request(request: RequestBuilder) -> AllActionResponse {
     request
         .send()
         .await.expect("Error sending request")
-        .json::<AllActionResponse>()
+        .json::<ActionResponse>()
         .await.expect("Error parsing JSON")
+        .data
 }
 
