@@ -1,19 +1,17 @@
 use crate::server::Server;
-use reqwest::Error;
 use serde::Deserialize;
-use serde_json::Value;
 
 #[derive(Debug, Deserialize)]
-struct InventoryItem {
-    slot: u8,
-    code: String,
-    quantity: u32,
+pub struct InventoryItem {
+    pub slot: u8,
+    pub code: String,
+    pub quantity: u32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CharacterData {
-    name: String,
-    skin: String,
+    // name: String,
+    // skin: String,
     level: u32,
     xp: u32,
     max_xp: u32,
@@ -85,14 +83,19 @@ pub struct CharacterData {
     pub inventory: Vec<InventoryItem>,
 }
 
-pub async fn get_char_infos(server: &Server, char: &str) -> Result<CharacterData, Error> {
+#[derive(Debug, Deserialize)]
+struct CharacterResponse {
+    data: CharacterData,
+}
+
+pub async fn get_char_infos(server: &Server, char: &str) -> CharacterData {
     server
         .client
         .get(format!("https://api.artifactsmmo.com/characters/{}", char))
         .headers(server.headers.clone())
         .send()
-        .await?
-        ["data"]
-        .json::<CharacterData>()
-        .await
+        .await.expect("Error sending request")
+        .json::<CharacterResponse>()
+        .await.expect("Error parsing JSON")
+        .data
 }
