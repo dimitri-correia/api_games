@@ -18,8 +18,6 @@ use std::sync::Arc;
 async fn main() -> Result<(), Box<dyn Error>> {
     let server = Arc::new(create_server());
 
-    let map = Arc::new(generate_map(Arc::clone(&server)).await);
-
     let characters = get_all_chars_infos(&server).await;
 
     let mut handles = Vec::new();
@@ -27,10 +25,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for char in characters {
         let server = Arc::clone(&server);
 
-        let map = Arc::clone(&map);
-
         let handle = tokio::spawn(async move {
-            routines::action_for_char(char, server, map).await;
+            routines::action_for_char(char, server).await;
         });
 
         handles.push(handle);

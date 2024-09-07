@@ -46,7 +46,7 @@ pub struct Map {
     pub tasks_master: HashMap<String, Vec<Position>>,
 }
 
-pub async fn generate_map(server: Arc<Server>) -> Map {
+pub async fn generate_map(server: &Arc<Server>) -> Map {
     let all_data = collect_from_api(&*server).await;
 
     // Filter and classify entries into respective categories
