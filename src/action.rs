@@ -9,6 +9,7 @@ pub enum Action {
     Unequip,
     Equip,
     Craft,
+    BankDeposit,
 }
 
 pub fn get_action_name(action: Action) -> &'static str {
@@ -19,6 +20,7 @@ pub fn get_action_name(action: Action) -> &'static str {
         Action::Unequip => "unequip",
         Action::Equip => "equip",
         Action::Craft => "crafting",
+        Action::BankDeposit => "bank/deposit",
     }
 }
 
