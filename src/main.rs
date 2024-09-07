@@ -1,15 +1,11 @@
 mod action;
 mod server;
 mod task;
-mod map;
 mod character;
 mod bank;
 mod movement;
 mod utils;
 mod routines;
-mod monster;
-mod items;
-mod resources;
 mod events;
 mod gameinfo;
 

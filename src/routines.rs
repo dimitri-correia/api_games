@@ -1,8 +1,9 @@
 use crate::action::{handle_action_with_cooldown, Action};
 use crate::character::CharacterData;
 use crate::server::Server;
-use crate::GameInfo;
 use std::sync::Arc;
+use crate::gameinfo::GameInfo;
+use crate::gameinfo::monster::Monster;
 
 pub async fn action_for_char(character: CharacterData, server_clone: Arc<Server>, game_info: Arc<GameInfo>) {
     let mut character = character;

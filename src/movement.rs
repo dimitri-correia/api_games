@@ -1,6 +1,6 @@
 use crate::action::{handle_action_with_cooldown, Action, AllActionResponse};
 use crate::character::CharacterData;
-use crate::map::{Map, Position};
+use crate::gameinfo::map::{Map, Position};
 use crate::server::Server;
 use serde_json::json;
 use std::collections::HashMap;

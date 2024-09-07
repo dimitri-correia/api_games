@@ -1,8 +1,10 @@
 use crate::server::Server;
-use crate::{items, map, monster, resources, GameInfo};
 use std::sync::Arc;
 
-mod i;
+pub mod map;
+pub mod resources;
+pub mod items;
+pub mod monster;
 
 #[derive(Debug, Clone)]
 pub struct GameInfo {
