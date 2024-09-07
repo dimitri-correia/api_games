@@ -1,9 +1,8 @@
+use crate::server::RequestMethod::GET;
 use crate::server::Server;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::error::Error;
 use std::sync::Arc;
-use crate::server::RequestMethod::GET;
 
 #[derive(Deserialize, Debug)]
 struct MapData {
@@ -42,7 +41,7 @@ pub struct Map {
 }
 
 pub async fn generate_map(server: Arc<Server>) -> Map {
-    let all_data = collect_from_api(&*server).await.unwrap();
+    let all_data = collect_from_api(&*server).await;
 
     // Filter and classify entries into respective categories
     let mut monster = HashMap::new();
@@ -93,7 +92,7 @@ pub async fn generate_map(server: Arc<Server>) -> Map {
     }
 }
 
-async fn collect_from_api(server: &Server) -> Result<Vec<MapEntry>, Box<dyn Error>> {
+async fn collect_from_api(server: &Server) -> Vec<MapEntry> {
     let mut page = 1;
     let mut all_data = Vec::new();
 
@@ -106,9 +105,9 @@ async fn collect_from_api(server: &Server) -> Result<Vec<MapEntry>, Box<dyn Erro
 
         let response = server.create_request(GET, "maps".to_string(), None, Some(params))
             .send()
-            .await?;
+            .await.expect("Error sending request");
 
-        let map_data: MapData = response.json().await?;
+        let map_data: MapData = response.json().await.expect("Error parsing JSON");
 
         // Collect all data
         all_data.extend(map_data.data);
@@ -121,5 +120,5 @@ async fn collect_from_api(server: &Server) -> Result<Vec<MapEntry>, Box<dyn Erro
         // Move to the next page
         page += 1;
     }
-    Ok(all_data)
+    all_data
 }
