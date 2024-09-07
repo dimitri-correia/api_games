@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut handles = Vec::new();
 
-    for char in characters{
+    for char in characters {
         let server = Arc::clone(&server);
 
         let map = Arc::clone(&map);

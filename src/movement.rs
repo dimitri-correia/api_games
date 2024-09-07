@@ -16,7 +16,7 @@ pub async fn move_to(server: &Server, character: &CharacterData, place: Place, m
         y: character.y,
     };
 
-    let target_position = get_target_position(place, map, current_position);
+    let target_position = get_target_position(place, map, &current_position);
 
     if current_position == target_position {
         return None;
@@ -39,7 +39,7 @@ pub async fn move_to(server: &Server, character: &CharacterData, place: Place, m
     )
 }
 
-fn get_target_position(place: Place, map: &Map, current_position: Position) -> Position {
+fn get_target_position(place: Place, map: &Map, current_position: &Position) -> Position {
     match place {
         Place::Bank => find_closest_position(&map.bank, current_position),
         Place::Resource => find_closest_position(&map.resource, current_position),
@@ -49,7 +49,7 @@ fn get_target_position(place: Place, map: &Map, current_position: Position) -> P
 
 fn find_closest_position(
     positions_map: &HashMap<String, Vec<Position>>,
-    current_position: Position,
+    current_position: &Position,
 ) -> Option<Position> {
     positions_map
         .values()
