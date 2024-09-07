@@ -11,7 +11,9 @@ mod monster;
 mod items;
 mod resources;
 mod events;
+mod gameinfo;
 
+use crate::gameinfo::get_game_info;
 use std::error::Error;
 use std::sync::Arc;
 
@@ -21,17 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let characters = character::get_all_chars_infos(&server).await;
 
-    let monsters = monster::get_all_monsters(&server).await;
-    let items = items::get_all_items(&server).await;
-    let resources = resources::get_all_resources(&server).await;
-    let map = map::generate_map(&server).await;
-
-    let game_info = Arc::new(GameInfo {
-        monsters,
-        items,
-        resources,
-        map,
-    });
+    let game_info = get_game_info(&server).await;
 
     let mut handles = Vec::new();
 
@@ -52,12 +44,4 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
-}
-
-#[derive(Debug, Clone)]
-pub struct GameInfo {
-    pub monsters: Vec<monster::Monster>,
-    pub items: Vec<items::Item>,
-    pub resources: Vec<resources::Resource>,
-    pub map: map::Map,
 }
