@@ -51,7 +51,7 @@ pub async fn action_for_char(character: CharacterData, server_clone: Arc<Server>
         //     handle_action_with_cooldown(&server_clone, Action::Fight, &character.name, 300, None).await;
         //     continue;
         // }
-        handle_action_with_cooldown(&server_clone, Action::Gathering, &character.name, max_item, None).await;
+        handle_action_with_cooldown(&server_clone, Action::Gathering, &character, Some(max_item), None).await;
     }
 }
 
