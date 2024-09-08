@@ -1,6 +1,7 @@
 use crate::action::{handle_action_with_cooldown, Action, AllActionResponse};
 use crate::character::CharacterData;
 use crate::server::Server;
+use crate::utils;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -19,12 +20,14 @@ async fn deposit_item(server: &Server, char: &str, item_code: &str, quantity: u3
 }
 
 
-pub async fn deposit_all(server: &Server, char: &CharacterData) {
+pub async fn deposit_all(server: &Server, char: &CharacterData) -> Option<AllActionResponse> {
+    let mut updated_char = None;
     for item in char.inventory.iter().clone() {
         if item.quantity > 0 {
-            println!("Depositing item: {:?}", item);
-            deposit_item(server, &char.name, &item.code, item.quantity).await;
+            utils::info(&*char.name, format!("Depositing item: {:?}", item).as_str());
+            updated_char = Some(deposit_item(server, &char.name, &item.code, item.quantity).await);
         }
     }
-    println!("Depositing all items");
+    utils::info(&*char.name, "Deposited all items");
+    updated_char
 }
