@@ -72,7 +72,7 @@ struct ActionResponse {
     data: AllActionResponse,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct AllActionResponse {
     // to get directly the cooldown remaining
     #[serde(deserialize_with = "deserialize_cooldown")]

@@ -2,14 +2,14 @@ use crate::server::RequestMethod::GET;
 use crate::server::Server;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct InventoryItem {
     pub slot: u8,
     pub code: String,
     pub quantity: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CharacterData {
     pub name: String,
     // skin: String,
@@ -20,26 +20,26 @@ pub struct CharacterData {
     gold: u32,
     speed: u32,
     pub mining_level: u32,
-    mining_xp: u32,
-    mining_max_xp: u32,
+    // mining_xp: u32,
+    // mining_max_xp: u32,
     pub woodcutting_level: u32,
-    woodcutting_xp: u32,
-    woodcutting_max_xp: u32,
+    // woodcutting_xp: u32,
+    // woodcutting_max_xp: u32,
     pub fishing_level: u32,
-    fishing_xp: u32,
-    fishing_max_xp: u32,
+    // fishing_xp: u32,
+    // fishing_max_xp: u32,
     pub weaponcrafting_level: u32,
-    weaponcrafting_xp: u32,
-    weaponcrafting_max_xp: u32,
+    // weaponcrafting_xp: u32,
+    // weaponcrafting_max_xp: u32,
     pub gearcrafting_level: u32,
-    gearcrafting_xp: u32,
-    gearcrafting_max_xp: u32,
+    // gearcrafting_xp: u32,
+    // gearcrafting_max_xp: u32,
     pub jewelrycrafting_level: u32,
-    jewelrycrafting_xp: u32,
-    jewelrycrafting_max_xp: u32,
+    // jewelrycrafting_xp: u32,
+    // jewelrycrafting_max_xp: u32,
     pub cooking_level: u32,
-    cooking_xp: u32,
-    cooking_max_xp: u32,
+    // cooking_xp: u32,
+    // cooking_max_xp: u32,
     hp: u32,
     haste: u32,
     critical_strike: u32,
