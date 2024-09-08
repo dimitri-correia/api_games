@@ -82,10 +82,13 @@ where
 }
 
 async fn send_request(request: RequestBuilder) -> AllActionResponse {
-    request
+    let response = request
         .send()
-        .await.expect("Error sending request")
-        .json::<ActionResponse>()
+        .await.expect("Error sending request");
+
+    println!("Calling {} with status: {}", response.url(), response.status());
+
+    response.json::<ActionResponse>()
         .await.expect("Error parsing JSON")
         .data
 }
