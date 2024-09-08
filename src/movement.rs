@@ -60,7 +60,6 @@ fn get_target_position(place: Place, game_info: &Arc<GameInfo>, current_position
     match place {
         Place::Bank => {
             let vec: Vec<Position> = game_info.map.bank.values().flat_map(|p| p.clone()).collect();
-
             find_closest_position(&vec, current_position)
         }
         Place::Resource(type_resource) => {
@@ -80,10 +79,16 @@ fn handle_resource(game_info: &Arc<GameInfo>, current_position: &Position, type_
 
     let resource = game_info.resources
         .iter()
-        .filter(|&resource| resource.skill.eq(&type_resource.to_string()) && resource.level <= char_lvl)
-        .max_by_key(|&resource| resource.level).expect("No resource found");
+        .filter(|&resource|
+            resource.skill.eq(&type_resource.to_string()) &&
+                resource.level <= char_lvl)
+        .max_by_key(|&resource| resource.level)
+        .expect("No resource found");
 
-    find_closest_position(&game_info.map.resource.get(&resource.code).expect("Resource doesn't exists"), current_position)
+    find_closest_position(
+        &game_info.map.resource.get(&resource.code).expect("Resource doesn't exists"),
+        current_position,
+    )
 }
 
 fn find_closest_position(
