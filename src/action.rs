@@ -1,30 +1,42 @@
 use crate::character::CharacterData;
+use crate::responsecode::ResponseCode;
 use crate::server::RequestMethod::POST;
 use crate::server::Server;
+use crate::utils;
 use crate::utils::handle_cooldown;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
+#[derive(Clone, Copy)]
 pub enum Action {
     Move,
     Fight,
     Gathering,
-    Unequip,
+    UnEquip,
     Equip,
     Craft,
     BankDeposit,
 }
 
-fn get_action_name(action: Action) -> &'static str {
-    match action {
-        Action::Fight => "fight",
-        Action::Gathering => "gathering",
-        Action::Move => "move",
-        Action::Unequip => "unequip",
-        Action::Equip => "equip",
-        Action::Craft => "crafting",
-        Action::BankDeposit => "bank/deposit",
+impl Action {
+    fn to_string(&self) -> String {
+        match self {
+            Action::Move => "move".to_string(),
+            Action::Fight => "fight".to_string(),
+            Action::Gathering => "gathering".to_string(),
+            Action::UnEquip => "unequip".to_string(),
+            Action::Equip => "equip".to_string(),
+            Action::Craft => "crafting".to_string(),
+            Action::BankDeposit => "bank/deposit".to_string(),
+        }
+    }
+
+    fn get_retry_codes(&self) -> Vec<ResponseCode> {
+        match self {
+            Action::BankDeposit => vec![ResponseCode::TransactionInProgress461],
+            _ => vec![]
+        }
     }
 }
 
@@ -35,25 +47,23 @@ pub async fn handle_action_with_cooldown(
     mut how_many: u32,
     json: Option<&Value>,
 ) -> AllActionResponse {
-    let action_name = get_action_name(action);
-    let request = server.create_request(POST, format!("my/{}/action/{}", char, action_name), json, None);
+    let request = server
+        .create_request(POST, format!("my/{}/action/{}", char, action.to_string()), json, None);
 
-    // Loop through the calls, stopping before the last one to handle it separately
-    while how_many > 1 {
-        println!("[{}] Remaining calls of {}: {}", char, action_name, how_many);
+    let mut response;
+
+    // Loop through the calls
+    loop {
+        utils::info(char, format!("Remaining calls of {}: {}", action.to_string(), how_many).as_str());
 
         // Make the request and handle cooldown
-        let response = send_request(request.try_clone().unwrap()).await;
-        handle_cooldown(char, &action_name, response.cooldown).await;
+        response = handle_request(request.try_clone().unwrap(), char, &action).await;
 
         how_many -= 1;
+        if how_many == 0 {
+            return response;
+        }
     }
-
-    // Last call, return the response from the final request
-    let final_response = send_request(request).await;
-    handle_cooldown(char, &action_name, final_response.cooldown).await;
-
-    final_response
 }
 
 
@@ -67,7 +77,7 @@ pub struct AllActionResponse {
     // to get directly the cooldown remaining
     #[serde(deserialize_with = "deserialize_cooldown")]
     cooldown: f32,
-    character: CharacterData,
+    pub character: CharacterData,
 }
 
 fn deserialize_cooldown<'de, D>(deserializer: D) -> Result<f32, D::Error>
@@ -81,15 +91,27 @@ where
     Ok(Cooldown::deserialize(deserializer)?.remaining_seconds)
 }
 
-async fn send_request(request: RequestBuilder) -> AllActionResponse {
-    let response = request
-        .send()
-        .await.expect("Error sending request");
+async fn handle_request(request: RequestBuilder, char: &str, action: &Action) -> AllActionResponse {
+    let mut response = request.try_clone().expect("Error cloning")
+        .send().await.expect("Error sending request");
 
-    println!("Calling {} with status: {}", response.url(), response.status());
+    utils::info(char, format!("Calling {} with status: {}", response.url(), response.status()).as_str());
 
-    response.json::<ActionResponse>()
-        .await.expect("Error parsing JSON")
-        .data
+    while action.get_retry_codes().iter().map(|x| x.get_code()).collect::<Vec<u16>>()
+        .contains(&response.status().as_u16()) {
+        utils::info(char, format!("Retrying action due to status: {}", response.status()).as_str());
+        response = request.try_clone().expect("Error cloning")
+            .send().await.expect("Error sending request");
+    }
+
+    let parsed_response = response
+        .json::<ActionResponse>()
+        .await
+        .expect("Error parsing JSON")
+        .data;
+
+    handle_cooldown(char, &action.to_string(), parsed_response.cooldown).await;
+
+    parsed_response
 }
 
