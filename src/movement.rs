@@ -4,7 +4,6 @@ use crate::gameinfo::map::Position;
 use crate::gameinfo::GameInfo;
 use crate::server::Server;
 use serde_json::json;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub enum Place {
@@ -63,7 +62,7 @@ fn get_target_position(place: Place, game_info: &Arc<GameInfo>, current_position
             let vec: Vec<Position> = game_info.map.bank.values().flat_map(|p| p.clone()).collect();
 
             find_closest_position(&vec, current_position)
-        },
+        }
         Place::Resource(type_resource) => {
             handle_resource(game_info, current_position, type_resource, character)
         }
