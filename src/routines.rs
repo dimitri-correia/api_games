@@ -32,7 +32,7 @@ pub async fn action_for_char(character: CharacterData, server_clone: Arc<Server>
         }
 
         // get the max item the character can hold
-        let max_item = 99; // character.inventory_max_items;
+        let max_item = character.inventory_max_items;
 
         // move to resource
         if let Some(updated_char) =
