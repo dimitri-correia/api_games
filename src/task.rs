@@ -1,5 +1,6 @@
 use crate::server::RequestMethod::POST;
 use crate::server::Server;
+use crate::utils;
 use std::error::Error;
 
 pub enum Task {
@@ -22,7 +23,7 @@ pub async fn handle_task(server: &Server, char: &str, task: Task) -> Result<(), 
         .send()
         .await?;
 
-    println!("Task response: {}", response.text().await?);
+    utils::info(char, format!("Task response: {}", response.text().await?).as_str());
 
     Ok(())
 }
