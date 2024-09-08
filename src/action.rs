@@ -43,25 +43,36 @@ impl Action {
 pub async fn handle_action_with_cooldown(
     server: &Server,
     action: Action,
-    char: &str,
-    mut how_many: u32,
+    char: &CharacterData,
+    mut how_many: Option<u32>,
     json: Option<&Value>,
 ) -> AllActionResponse {
     let request = server
-        .create_request(POST, format!("my/{}/action/{}", char, action.to_string()), json, None);
+        .create_request(POST, format!("my/{}/action/{}", char.name, action.to_string()), json, None);
 
     let mut response;
 
     // Loop through the calls
     loop {
-        utils::info(char, format!("Remaining calls of {}: {}", action.to_string(), how_many).as_str());
+        if let Some(how_many) = how_many {
+            utils::info(&*char.name, format!("Remaining calls of {}: {}", action.to_string(), how_many).as_str());
+        } else {
+            utils::info(&*char.name, format!("Inventory {}/{}", char.inventory_count, char.inventory_max_items).as_str());
+        }
 
         // Make the request and handle cooldown
-        response = handle_request(request.try_clone().unwrap(), char, &action).await;
+        response = handle_request(request.try_clone().unwrap(), &*char.name, &action).await;
 
-        how_many -= 1;
-        if how_many == 0 {
-            return response;
+        // either resume if you have done enough or if the inventory is full
+        if how_many.is_some() {
+            how_many = Some(how_many.unwrap() - 1);
+            if how_many == Some(0) {
+                return response;
+            }
+        } else {
+            if char.inventory_count == char.inventory_max_items {
+                return response;
+            }
         }
     }
 }
