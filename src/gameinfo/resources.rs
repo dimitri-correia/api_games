@@ -23,9 +23,6 @@ pub struct Resource {
 #[derive(Deserialize, Debug)]
 pub struct ResourcePage {
     pub data: Vec<Resource>,
-    pub total: usize,
-    pub page: usize,
-    pub size: usize,
     pub pages: usize,
 }
 
