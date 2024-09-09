@@ -9,8 +9,11 @@ use std::sync::Arc;
 pub enum Place {
     Bank,
     Resource(GatherType),
+    Fight,
+    Crafting(GatherType),
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum GatherType {
     Wood,
     Fish,
@@ -48,8 +51,8 @@ pub async fn move_to(server: &Server, character: &CharacterData, place: Place, g
         handle_action_with_cooldown(
             server,
             Action::Move,
-            &character.name,
-            1,
+            character,
+            Some(1),
             Some(&movement_action),
         )
             .await,
@@ -59,14 +62,23 @@ pub async fn move_to(server: &Server, character: &CharacterData, place: Place, g
 fn get_target_position(place: Place, game_info: &Arc<GameInfo>, current_position: &Position, character: &CharacterData) -> Position {
     match place {
         Place::Bank => {
-            let vec: Vec<Position> = game_info.map.bank.values().flat_map(|p| p.clone()).collect();
-            find_closest_position(&vec, current_position)
+            handle_bank(game_info, current_position)
         }
         Place::Resource(type_resource) => {
             handle_resource(game_info, current_position, type_resource, character)
         }
-    }
-        .expect("Expected at least one valid position")
+        Place::Fight => {
+            handle_fight(game_info, current_position, character)
+        }
+        Place::Crafting(type_resource) => {
+            handle_crafting(game_info, current_position, type_resource, character)
+        }
+    }.expect("Expected at least one valid position")
+}
+
+fn handle_bank(game_info: &Arc<GameInfo>, current_position: &Position) -> Option<Position> {
+    let all_banks: Vec<Position> = game_info.map.bank.values().flat_map(|p| p.clone()).collect();
+    find_closest_position(&all_banks, current_position)
 }
 
 fn handle_resource(game_info: &Arc<GameInfo>, current_position: &Position, type_resource: GatherType, character: &CharacterData)
@@ -87,6 +99,29 @@ fn handle_resource(game_info: &Arc<GameInfo>, current_position: &Position, type_
 
     find_closest_position(
         &game_info.map.resource.get(&resource.code).expect("Resource doesn't exists"),
+        current_position,
+    )
+}
+
+// todo
+fn handle_crafting(game_info: &Arc<GameInfo>, current_position: &Position, type_resource: GatherType, character: &CharacterData)
+                   -> Option<Position> {
+    find_closest_position(
+        &game_info.map.workshop.get(&type_resource.to_string()).expect("Workshop doesn't exists"),
+        current_position,
+    )
+}
+
+// todo : improve this function
+fn handle_fight(game_info: &Arc<GameInfo>, current_position: &Position, character: &CharacterData)
+                -> Option<Position> {
+    let monster = game_info.monsters
+        .iter()
+        .min_by_key(|&resource| resource.level)
+        .expect("No resource found");
+
+    find_closest_position(
+        &game_info.map.monster.get(&monster.code).expect("Monster doesn't exists"),
         current_position,
     )
 }
