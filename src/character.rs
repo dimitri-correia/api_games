@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct InventoryItem {
-    pub slot: u8,
+    // pub slot: u8,
     pub code: String,
     pub quantity: u32,
 }
@@ -82,11 +82,9 @@ pub struct CharacterData {
     task_total: u32,
     pub inventory_max_items: u32,
     pub inventory: Vec<InventoryItem>,
-    #[serde(skip)]
-    pub inventory_count: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct CharacterResponse {
     data: CharacterData,
 }
@@ -97,7 +95,7 @@ struct AllCharactersResponse {
 }
 
 pub async fn get_char_infos(server: &Server, character: &str) -> CharacterData {
-    let mut character_data = server
+    server
         .create_request(GET, format!("characters/{}", character), None, None)
         .send()
         .await
@@ -105,15 +103,11 @@ pub async fn get_char_infos(server: &Server, character: &str) -> CharacterData {
         .json::<CharacterResponse>()
         .await
         .expect("Error parsing JSON")
-        .data;
-
-    get_inventory_count(&mut character_data);
-
-    character_data
+        .data
 }
 
 pub async fn get_all_chars_infos(server: &Server) -> Vec<CharacterData> {
-    let mut characters = server
+    server
         .create_request(GET, "my/characters".to_string(), None, None)
         .send()
         .await
@@ -121,19 +115,14 @@ pub async fn get_all_chars_infos(server: &Server) -> Vec<CharacterData> {
         .json::<AllCharactersResponse>()
         .await
         .expect("Error parsing JSON")
-        .data;
-
-    // Update inventory_count for each character
-    for character in &mut characters {
-        get_inventory_count(character);
-    }
-
-    characters
+        .data
 }
 
-fn get_inventory_count(character_data: &mut CharacterData) {
-    character_data.inventory_count = character_data.inventory
-        .iter()
-        .map(|item| item.quantity)
-        .sum();
+impl CharacterData {
+    pub fn get_inventory_count(&self) -> u32 {
+        self.inventory
+            .iter()
+            .map(|item| item.quantity)
+            .sum()
+    }
 }
