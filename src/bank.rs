@@ -1,18 +1,20 @@
 use crate::action::{handle_action_with_cooldown, Action, AllActionResponse};
 use crate::character::CharacterData;
+use crate::server::RequestMethod::GET;
 use crate::server::Server;
 use crate::utils;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
-struct DepositItem {
+struct BankItem {
     code: String,
     quantity: u32,
 }
 
 async fn deposit_item(server: &Server, char: &CharacterData, item_code: &str, quantity: u32) -> AllActionResponse {
-    let item_data = DepositItem {
+    let item_data = BankItem {
         code: item_code.to_string(),
         quantity,
     };
@@ -30,4 +32,41 @@ pub async fn deposit_all(server: &Server, char: &CharacterData) -> Option<AllAct
     }
     utils::info(&*char.name, "Deposited all items");
     updated_char
+}
+
+#[derive(Deserialize, Debug)]
+struct BankPage {
+    pub data: Vec<BankItem>,
+    pub pages: usize,
+}
+
+pub async fn get_all_items_in_bank(server: &Server) -> Vec<BankItem> {
+    let mut page = 1;
+    let mut all_data = Vec::new();
+
+    // Collect all map data from the API
+    loop {
+        let mut params = HashMap::new();
+        params.insert("size", "100");
+        let p = page.to_string();
+        params.insert("page", &*p);
+
+        let response = server.create_request(GET, "my/bank/items".to_string(), None, Some(params))
+            .send()
+            .await.expect("Error sending request");
+
+        let bank_items: BankPage = response.json().await.expect("Error parsing JSON");
+
+        // Collect all data
+        all_data.extend(bank_items.data);
+
+        // Check if we've reached the last page
+        if page == bank_items.pages {
+            break;
+        }
+
+        // Move to the next page
+        page += 1;
+    }
+    all_data
 }
