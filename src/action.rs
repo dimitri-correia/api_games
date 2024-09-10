@@ -35,10 +35,12 @@ impl Action {
     }
 
     fn get_retry_codes(&self) -> Vec<ResponseCode> {
-        match self {
+        let mut codes = match self {
             Action::BankDeposit => vec![ResponseCode::TransactionInProgress461],
             _ => vec![]
-        }
+        };
+        codes.append(&mut vec![ResponseCode::Cooldown499]);
+        codes
     }
 }
 
