@@ -17,6 +17,7 @@ pub enum Action {
     Equip,
     Craft,
     BankDeposit,
+    BankWithdraw,
 }
 
 impl Action {
@@ -29,6 +30,7 @@ impl Action {
             Action::Equip => "equip".to_string(),
             Action::Craft => "crafting".to_string(),
             Action::BankDeposit => "bank/deposit".to_string(),
+            Action::BankWithdraw => "bank/withdraw".to_string(),
         }
     }
 
@@ -51,17 +53,20 @@ pub async fn handle_action_with_cooldown(
         .create_request(POST, format!("my/{}/action/{}", char.name, action.to_string()), json, None);
 
     let mut response;
+    let mut inventory_count = char.get_inventory_count();
 
     // Loop through the calls
     loop {
         if let Some(how_many) = how_many {
             utils::info(&*char.name, format!("Remaining calls of {}: {}", action.to_string(), how_many).as_str());
         } else {
-            utils::info(&*char.name, format!("Inventory {}/{}", char.inventory_count, char.inventory_max_items).as_str());
+            utils::info(&*char.name, format!("Inventory {}/{}", inventory_count, char.inventory_max_items).as_str());
         }
 
         // Make the request and handle cooldown
         response = handle_request(request.try_clone().unwrap(), &*char.name, &action).await;
+        // let mut updated_char = response.character.clone();
+        // char = &mut updated_char;
 
         // either resume if you have done enough or if the inventory is full
         if how_many.is_some() {
@@ -70,7 +75,9 @@ pub async fn handle_action_with_cooldown(
                 return response;
             }
         } else {
-            if char.inventory_count == char.inventory_max_items {
+            inventory_count = char.get_inventory_count();
+            utils::info(&*char.name, format!("Inventory: {:?}", char.inventory).as_str());
+            if inventory_count == char.inventory_max_items {
                 return response;
             }
         }

@@ -13,7 +13,7 @@ pub struct InventoryItem {
 pub struct CharacterData {
     pub name: String,
     // skin: String,
-    level: u32,
+    pub level: u32,
     xp: u32,
     max_xp: u32,
     achievements_points: u32,
