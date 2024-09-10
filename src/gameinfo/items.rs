@@ -1,6 +1,6 @@
 use crate::server::RequestMethod::GET;
 use crate::server::Server;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -9,7 +9,7 @@ pub struct Effect {
     pub value: i32,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct CraftItem {
     pub code: String,
     pub quantity: u32,
