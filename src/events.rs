@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct Content {
+struct Content {
     pub r#type: String,
     pub code: String,
 }
@@ -29,7 +29,7 @@ pub struct MapItem {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct MapPage {
+struct MapPage {
     pub data: Vec<MapItem>,
     pub pages: usize,
 }
