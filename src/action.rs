@@ -7,6 +7,9 @@ use crate::utils::handle_cooldown;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
+use std::time::Duration;
+use std::vec;
+use tokio::time;
 
 #[derive(Clone, Copy)]
 pub enum Action {
@@ -113,7 +116,17 @@ where
 
 async fn handle_request(request: RequestBuilder, char: &str, action: &Action) -> AllActionResponse {
     let mut response = request.try_clone().expect("Error cloning")
-        .send().await.expect("Error sending request");
+        .send().await;
+
+    let mut number_of_retry: u8 = 10;
+    while response.is_err() && number_of_retry != 0 {
+        number_of_retry -= 1;
+        time::sleep(Duration::from_secs(1)).await;
+        response = request.try_clone().expect("Error cloning")
+            .send().await
+    }
+
+    let mut response = response.expect("Error sending request");
 
     utils::info(char, format!("Calling {} with status: {}", response.url(), response.status()).as_str());
 
