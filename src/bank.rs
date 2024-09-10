@@ -6,10 +6,11 @@ use crate::utils;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
+use crate::gameinfo::items::{CraftItem, Item};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct BankItem {
-    code: String,
+pub struct BankItem {
+    pub code: String,
     quantity: u32,
 }
 
@@ -32,6 +33,12 @@ pub async fn deposit_all(server: &Server, char: &CharacterData) -> Option<AllAct
     }
     utils::info(&*char.name, "Deposited all items");
     updated_char
+}
+
+pub async fn withdraw_item(server: &Server, char: &CharacterData, item: CraftItem) -> Option<AllActionResponse> {
+    let response = handle_action_with_cooldown(server, Action::BankWithdraw, char, Some(1), Some(&json!(item))).await;
+    Some(response)
+
 }
 
 #[derive(Deserialize, Debug)]
