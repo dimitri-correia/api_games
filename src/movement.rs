@@ -7,6 +7,7 @@ use serde_json::json;
 use std::sync::Arc;
 
 pub enum Place {
+    Exact(Position),
     Bank,
     Resource(GatherType),
     Fight,
@@ -61,6 +62,7 @@ pub async fn move_to(server: &Server, character: &CharacterData, place: Place, g
 
 fn get_target_position(place: Place, game_info: &Arc<GameInfo>, current_position: &Position, character: &CharacterData) -> Position {
     match place {
+        Place::Exact(position) => Some(position),
         Place::Bank => {
             handle_bank(game_info, current_position)
         }
@@ -117,6 +119,7 @@ fn handle_fight(game_info: &Arc<GameInfo>, current_position: &Position, characte
                 -> Option<Position> {
     let monster = game_info.monsters
         .iter()
+        .filter(|&monster| monster.level <= character.level)
         .min_by_key(|&resource| resource.level)
         .expect("No resource found");
 
