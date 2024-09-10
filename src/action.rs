@@ -37,9 +37,9 @@ impl Action {
     fn get_retry_codes(&self) -> Vec<ResponseCode> {
         let mut codes = match self {
             Action::BankDeposit => vec![ResponseCode::TransactionInProgress461],
-            _ => vec![]
+            _ => Vec::new(),
         };
-        codes.append(&mut vec![ResponseCode::Cooldown499]);
+        codes.push(ResponseCode::Cooldown499);
         codes
     }
 }
