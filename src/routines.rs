@@ -1,5 +1,8 @@
 use crate::action::{handle_action_with_cooldown, Action};
-use crate::character::CharacterData;
+use crate::bank::get_all_items_in_bank;
+use crate::character::{get_char_infos, CharacterData};
+use crate::gameinfo::items::CraftItem;
+use crate::gameinfo::map::Position;
 use crate::gameinfo::GameInfo;
 use crate::movement::GatherType;
 use crate::server::Server;
@@ -8,6 +11,12 @@ use std::sync::Arc;
 
 pub async fn action_for_char(character: CharacterData, server_clone: Arc<Server>, game_info: Arc<GameInfo>) {
     let mut character = character;
+
+    let bank_items = get_all_items_in_bank(&server_clone).await;
+
+    // if bank_items.iter().find(|i| i.code == "copper_ore").is_some() && character.name.eq("dim") {
+    //     tmp_crafting(&mut character, &server_clone, &game_info).await;
+    // }
 
     // if events
     // handle_events(&server_clone, &character).await;
@@ -31,27 +40,138 @@ pub async fn action_for_char(character: CharacterData, server_clone: Arc<Server>
             character = updated_char.character;
         }
 
-        // get the max item the character can hold
-        let max_item = character.inventory_max_items;
-
         // move to resource
+        let gather_type = GatherType::Mine;
         if let Some(updated_char) =
             movement::move_to(
                 &server_clone,
                 &character,
-                movement::Place::Resource(GatherType::Mine),
+                movement::Place::Resource(gather_type),
+                //movement::Place::Fight,
                 &game_info)
                 .await
         {
             character = updated_char.character;
         }
 
+        // fight
+        // handle_action_with_cooldown(
+        //     &server_clone,
+        //     Action::Fight,
+        //     &character,
+        //     Some(300),
+        //     None,
+        // ).await;
+
         // gather resource
-        // if character.name.eq("dim") {
-        //     handle_action_with_cooldown(&server_clone, Action::Fight, &character.name, 300, None).await;
-        //     continue;
-        // }
-        handle_action_with_cooldown(&server_clone, Action::Gathering, &character, Some(max_item), None).await;
+        handle_action_with_cooldown(
+            &server_clone,
+            Action::Gathering,
+            &character,
+            Some(character.inventory_max_items),
+            None,
+        ).await;
+
+        // move to crafting
+        if let Some(updated_char) =
+            movement::move_to(
+                &server_clone,
+                &character,
+                movement::Place::Exact(Position { x: 1, y: 5 }), // todo
+                // movement::Place::Crafting(gather_type),
+                &game_info)
+                .await
+        {
+            character = updated_char.character;
+        }
+
+        // transform resource
+        let craft = CraftItem {
+            code: "iron".to_string(),
+            quantity: character.inventory.iter()
+                .filter(|i| i.code == "iron_ore")
+                .map(|i| i.quantity)
+                .sum::<u32>() / 8,
+        };
+        handle_action_with_cooldown(
+            &server_clone,
+            Action::Craft,
+            &character,
+            None,
+            Some(&serde_json::json!(craft)),
+        ).await;
+    }
+}
+
+async fn tmp_crafting(mut char: &mut CharacterData, server_clone: &Arc<Server>, game_info: &Arc<GameInfo>) {
+    loop {
+        // move to bank
+        // tmp force move
+        let mut char =  get_char_infos(&server_clone, &char.name).await;
+
+        movement::move_to(&server_clone, &char, movement::Place::Bank, &game_info).await;
+
+        // deposit all items
+        let mut char =  get_char_infos(&server_clone, &char.name).await;
+        bank::deposit_all(&server_clone, &mut char).await;
+
+        // withdraw item
+        let qtt = 76;//char.inventory_max_items;
+        let item = CraftItem {
+            code: "copper".to_string(),
+            quantity: qtt,
+        };
+        bank::withdraw_item(&server_clone, &mut char, item).await;
+
+        // // tmp force move
+        // let mut char =  get_char_infos(&server_clone, &char.name).await;
+        //
+        // // move to crafting
+        // movement::move_to(
+        //     &server_clone,
+        //     &char,
+        //     movement::Place::Exact(Position { x: 1, y: 5 }), // todo
+        //     // movement::Place::Crafting(gather_type),
+        //     &game_info)
+        //     .await;
+        //
+        // // transform resource
+        // let craft = CraftItem {
+        //     code: "copper".to_string(),
+        //     quantity: 14,
+        // };
+        // handle_action_with_cooldown(
+        //     &server_clone,
+        //     Action::Craft,
+        //     &char,
+        //     Some(1),
+        //     Some(&serde_json::json!(craft)),
+        // ).await;
+
+        // tmp force move
+        let mut char =  get_char_infos(&server_clone, &char.name).await;
+
+        // move to weapon crafting
+        movement::move_to(
+            &server_clone,
+            &char,
+            movement::Place::Exact(Position { x: 3, y: 1 }), // todo
+            // movement::Place::Crafting(gather_type),
+            &game_info)
+            .await;
+
+        // transform resource
+        let craft = CraftItem {
+            code: "copper_helmet".to_string(),
+            quantity: qtt/6,
+        };
+        handle_action_with_cooldown(
+            &server_clone,
+            Action::Craft,
+            &char,
+            Some(1),
+            Some(&serde_json::json!(craft)),
+        ).await;
     }
 }
 
