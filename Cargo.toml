@@ -12,3 +12,11 @@ serde_json = "1.0.127"
 chrono = "0.4.38"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
+
+[profile.dev]
+debug = 0
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
