@@ -17,29 +17,24 @@ use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    setup_logs();
 
     info!("Starting the bot");
 
-    let server = Arc::new(server::create_server());
-
-    let characters = character::get_all_chars_infos(&server).await;
-    let game_info = gameinfo::get_game_info(&server).await;
+    let game_info = gameinfo::get_game_info().await;
+    let characters = character::get_all_chars_infos(&game_info.server).await;
 
     let mut handles = Vec::new();
 
-    for char in characters {
-        let server = Arc::clone(&server);
-        let game_info = Arc::clone(&game_info);
+    for mut char in characters.into_iter() {
+        let game_info_clone = Arc::clone(&game_info);
 
         let handle = tokio::spawn(async move {
             let name = char.name.clone();
             utils::info(&name, "Starting routine");
-            routines::action_for_char(char, server, game_info).await;
+
+            routines::action_for_char(game_info_clone, &mut char).await;
+
             utils::info(&name, "Routine has ended");
         });
 
@@ -52,4 +47,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+fn setup_logs() {
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("setting default subscriber failed");
 }
