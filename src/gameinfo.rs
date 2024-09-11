@@ -1,4 +1,4 @@
-use crate::server::Server;
+use crate::server::creation::{create_server, Server};
 use std::sync::Arc;
 
 pub mod map;
@@ -12,20 +12,23 @@ pub struct GameInfo {
     pub items: Vec<items::Item>,
     pub resources: Vec<resources::Resource>,
     pub map: map::Map,
+    pub server: Server,
 }
 
 
-pub async fn get_game_info(server: &Arc<Server>) -> Arc<GameInfo> {
+pub async fn get_game_info() -> Arc<GameInfo> {
+    let server = create_server();
+
     let monsters = monster::get_all_monsters(&server).await;
     let items = items::get_all_items(&server).await;
     let resources = resources::get_all_resources(&server).await;
     let map = map::generate_map(&server).await;
 
-    let game_info = Arc::new(GameInfo {
+    Arc::new(GameInfo {
         monsters,
         items,
         resources,
         map,
-    });
-    game_info
+        server,
+    })
 }
