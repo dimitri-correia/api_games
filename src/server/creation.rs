@@ -4,7 +4,7 @@ use reqwest::{Client, RequestBuilder};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
-use secrecy::Secret;
+use secrecy::{ExposeSecret, Secret};
 
 #[derive(Clone, Debug)]
 pub struct Server {
@@ -26,6 +26,7 @@ pub fn create_server() -> Server {
     let mut headers = HeaderMap::new();
     headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+    // todo use secret
     headers.insert(
         AUTHORIZATION,
         HeaderValue::from_str(&format!("Bearer {}", get_token())).unwrap(),
