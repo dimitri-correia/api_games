@@ -1,12 +1,14 @@
 use crate::action::{handle_action_with_cooldown, Action, AllActionResponse};
 use crate::character::CharacterData;
+use crate::gameinfo::items::CraftItem;
+use crate::gameinfo::GameInfo;
 use crate::server::RequestMethod::GET;
 use crate::server::Server;
-use crate::utils;
+use crate::{movement, utils};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
-use crate::gameinfo::items::{CraftItem, Item};
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BankItem {
@@ -22,9 +24,9 @@ async fn deposit_item(server: &Server, char: &CharacterData, item_code: &str, qu
     handle_action_with_cooldown(server, Action::BankDeposit, char, Some(1), Some(&json!(item_data))).await
 }
 
-
-pub async fn deposit_all(server: &Server, char: &CharacterData) -> Option<AllActionResponse> {
-    let mut updated_char = None;
+pub async fn deposit_all(server: &Server, char: &CharacterData, game_info: &Arc<GameInfo>) -> Option<AllActionResponse> {
+    let mut updated_char =
+        movement::move_to(server, char, movement::Place::Bank, game_info).await;
     for item in char.inventory.iter().clone() {
         if item.quantity > 0 {
             utils::info(&*char.name, format!("Depositing item: {:?}", item).as_str());
@@ -35,10 +37,14 @@ pub async fn deposit_all(server: &Server, char: &CharacterData) -> Option<AllAct
     updated_char
 }
 
-pub async fn withdraw_item(server: &Server, char: &CharacterData, item: CraftItem) -> Option<AllActionResponse> {
-    let response = handle_action_with_cooldown(server, Action::BankWithdraw, char, Some(1), Some(&json!(item))).await;
+pub async fn withdraw_item(server: &Server, char: &CharacterData, game_info: &Arc<GameInfo>, item_name: &str, qtt: u32) -> Option<AllActionResponse> {
+    movement::move_to(server, char, movement::Place::Bank, game_info).await;
+    let item = Some(&json!(CraftItem {
+        code: item_name.to_string(),
+        quantity: qtt,
+    }));
+    let response = handle_action_with_cooldown(server, Action::BankWithdraw, char, Some(1), item).await;
     Some(response)
-
 }
 
 #[derive(Deserialize, Debug)]
