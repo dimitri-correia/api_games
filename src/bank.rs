@@ -15,6 +15,7 @@ use tracing::{error, info};
 pub struct Bank {
     pub info: BankInfo,
     pub content: Vec<Item>,
+    pub game_info: Arc<GameInfo>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -33,6 +34,7 @@ impl Bank {
         Bank {
             info,
             content,
+            game_info: Arc::clone(game_info),
         }
     }
 
@@ -59,7 +61,6 @@ impl Bank {
 
     async fn deposit_gold(
         &self,
-        game_info: &Arc<GameInfo>,
         mut char: &mut CharacterData,
         quantity: Option<u32>,
     ) {
@@ -75,10 +76,10 @@ impl Bank {
             return;
         }
 
-        movement::move_to(game_info, &mut char, movement::Place::Bank).await;
+        movement::move_to(&self.game_info, &mut char, movement::Place::Bank).await;
 
         handle_action_with_cooldown(
-            game_info,
+            &self.game_info,
             Action::BankDepositGold,
             &mut char,
             Some(1),
@@ -88,7 +89,6 @@ impl Bank {
 
     async fn deposit_item(
         &self,
-        game_info: &Arc<GameInfo>,
         mut char: &mut CharacterData,
         item_code: &str,
         quantity: Option<u32>,
@@ -119,14 +119,14 @@ impl Bank {
             return;
         }
 
-        movement::move_to(game_info, &mut char, movement::Place::Bank).await;
+        movement::move_to(&self.game_info, &mut char, movement::Place::Bank).await;
 
         let item = Item {
             code: item_code.to_string(),
             quantity,
         };
         handle_action_with_cooldown(
-            game_info,
+            &self.game_info,
             Action::BankDeposit,
             &mut char,
             Some(1),
@@ -136,22 +136,21 @@ impl Bank {
 
     pub async fn deposit_all_items_and_gold(
         &self,
-        game_info: &Arc<GameInfo>,
         mut char: &mut CharacterData,
     ) {
-        self.deposit_gold(game_info, &mut char, None).await;
+        self.deposit_gold(&mut char, None).await;
 
         if char.get_inventory_count() == 0 {
             info!("No items to deposit");
             return;
         }
 
-        movement::move_to(game_info, &mut char, movement::Place::Bank).await;
+        movement::move_to(&self.game_info, &mut char, movement::Place::Bank).await;
 
         for item in char.inventory.iter().clone() {
             if item.quantity > 0 {
                 info!("Depositing item: {:?}", item);
-                self.deposit_item(game_info, &mut char, &item.code, None).await;
+                self.deposit_item(&mut char, &item.code, None).await;
             }
         }
 
@@ -160,7 +159,6 @@ impl Bank {
 
     pub async fn withdraw_item(
         &self,
-        game_info: &Arc<GameInfo>,
         mut char: &mut CharacterData,
         item_code: &str,
         qtt: u32,
@@ -179,7 +177,7 @@ impl Bank {
             return;
         }
 
-        movement::move_to(game_info, &mut char, movement::Place::Bank).await;
+        movement::move_to(&self.game_info, &mut char, movement::Place::Bank).await;
 
         let item = Some(&json!(Item {
             code: item_code.to_string(),
@@ -187,7 +185,7 @@ impl Bank {
         }));
 
         handle_action_with_cooldown(
-            game_info,
+            &self.game_info,
             Action::BankWithdraw,
             &mut char,
             Some(1),
@@ -197,7 +195,6 @@ impl Bank {
 
     pub async fn withdraw_gold(
         &self,
-        game_info: &Arc<GameInfo>,
         mut char: &mut CharacterData,
         quantity: u32,
     ) {
@@ -206,10 +203,10 @@ impl Bank {
             return;
         }
 
-        movement::move_to(game_info, &mut char, movement::Place::Bank).await;
+        movement::move_to(&self.game_info, &mut char, movement::Place::Bank).await;
 
         handle_action_with_cooldown(
-            game_info,
+            &self.game_info,
             Action::BankWithdrawGold,
             &mut char,
             Some(1),
