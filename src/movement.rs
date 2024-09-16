@@ -1,8 +1,7 @@
-use crate::action::{handle_action_with_cooldown, Action, AllActionResponse};
+use crate::action::{handle_action_with_cooldown, Action};
 use crate::character::CharacterData;
 use crate::gameinfo::map::Position;
 use crate::gameinfo::GameInfo;
-use crate::server::Server;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -31,16 +30,11 @@ impl GatherType {
     }
 }
 
-pub async fn move_to(server: &Server, character: &CharacterData, place: Place, game_info: &Arc<GameInfo>) -> Option<AllActionResponse> {
-    let current_position = Position {
-        x: character.x,
-        y: character.y,
-    };
+pub async fn move_to(game_info: &Arc<GameInfo>, mut character: &mut CharacterData, place: Place) {
+    let target_position = get_target_position(game_info, character, place);
 
-    let target_position = get_target_position(place, game_info, &current_position, character);
-
-    if current_position == target_position {
-        return None;
+    if character.get_current_position() == target_position {
+        return;
     }
 
     let movement_action = json!({
@@ -48,19 +42,17 @@ pub async fn move_to(server: &Server, character: &CharacterData, place: Place, g
         "y": target_position.y,
     });
 
-    Some(
-        handle_action_with_cooldown(
-            server,
-            Action::Move,
-            character,
-            Some(1),
-            Some(&movement_action),
-        )
-            .await,
-    )
+    handle_action_with_cooldown(
+        game_info,
+        Action::Move,
+        &mut character,
+        Some(1),
+        Some(&movement_action),
+    ).await;
 }
 
-fn get_target_position(place: Place, game_info: &Arc<GameInfo>, current_position: &Position, character: &CharacterData) -> Position {
+fn get_target_position(game_info: &Arc<GameInfo>, character: &CharacterData, place: Place) -> Position {
+    let current_position = character.get_current_position();
     match place {
         Place::Exact(position) => Some(position),
         Place::Bank => {
@@ -78,12 +70,12 @@ fn get_target_position(place: Place, game_info: &Arc<GameInfo>, current_position
     }.expect("Expected at least one valid position")
 }
 
-fn handle_bank(game_info: &Arc<GameInfo>, current_position: &Position) -> Option<Position> {
+fn handle_bank(game_info: &Arc<GameInfo>, current_position: Position) -> Option<Position> {
     let all_banks: Vec<Position> = game_info.map.bank.values().flat_map(|p| p.clone()).collect();
     find_closest_position(&all_banks, current_position)
 }
 
-fn handle_resource(game_info: &Arc<GameInfo>, current_position: &Position, type_resource: GatherType, character: &CharacterData)
+fn handle_resource(game_info: &Arc<GameInfo>, current_position: Position, type_resource: GatherType, character: &CharacterData)
                    -> Option<Position> {
     let char_lvl = match type_resource {
         GatherType::Wood => character.woodcutting_level,
@@ -106,7 +98,7 @@ fn handle_resource(game_info: &Arc<GameInfo>, current_position: &Position, type_
 }
 
 // todo
-fn handle_crafting(game_info: &Arc<GameInfo>, current_position: &Position, type_resource: GatherType, character: &CharacterData)
+fn handle_crafting(game_info: &Arc<GameInfo>, current_position: Position, type_resource: GatherType, character: &CharacterData)
                    -> Option<Position> {
     find_closest_position(
         &game_info.map.workshop.get(&type_resource.to_string()).expect("Workshop doesn't exists"),
@@ -115,7 +107,7 @@ fn handle_crafting(game_info: &Arc<GameInfo>, current_position: &Position, type_
 }
 
 // todo : improve this function
-fn handle_fight(game_info: &Arc<GameInfo>, current_position: &Position, character: &CharacterData)
+fn handle_fight(game_info: &Arc<GameInfo>, current_position: Position, character: &CharacterData)
                 -> Option<Position> {
     let monster = game_info.monsters
         .iter()
