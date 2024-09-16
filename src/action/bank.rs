@@ -2,7 +2,7 @@ use crate::action::{handle_action_with_cooldown, Action};
 use crate::character::CharacterData;
 use crate::gameinfo::items::Item;
 use crate::gameinfo::GameInfo;
-use crate::movement;
+use crate::action::movement;
 use crate::server::creation::RequestMethod::GET;
 use serde::{Deserialize, Serialize};
 use serde_json::json;

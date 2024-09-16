@@ -1,10 +1,13 @@
+pub mod bank;
+pub mod movement;
+
 use crate::character::CharacterData;
-use crate::responsecode::ResponseCode;
+use crate::server::responsecode::ResponseCode;
 use crate::server::RequestMethod::POST;
 use crate::server::Server;
 use crate::utils;
 use crate::utils::handle_cooldown;
-use reqwest::RequestBuilder;
+use reqwest::{Error, RequestBuilder, Response};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::time::Duration;
@@ -20,7 +23,9 @@ pub enum Action {
     Equip,
     Craft,
     BankDeposit,
+    BankDepositGold,
     BankWithdraw,
+    BankWithdrawGold,
 }
 
 impl Action {
@@ -34,6 +39,8 @@ impl Action {
             Action::Craft => "crafting".to_string(),
             Action::BankDeposit => "bank/deposit".to_string(),
             Action::BankWithdraw => "bank/withdraw".to_string(),
+            Action::BankDepositGold => "bank/deposit/gold".to_string(),
+            Action::BankWithdrawGold => {}
         }
     }
 
@@ -65,13 +72,11 @@ pub async fn handle_action_with_cooldown(
         if let Some(how_many) = how_many {
             utils::info(&*char.name, format!("Remaining calls of {}: {}", action.to_string(), how_many).as_str());
         } else {
-            utils::info(&*char.name, format!("Inventory {}/{}", inventory_count, char.inventory_max_items).as_str());
+            utils::info(&*char.name, format!("Inventory {}/{}", inventory_count, response.character.inventory_max_items).as_str());
         }
 
         // Make the request and handle cooldown
         response = handle_request(request.try_clone().unwrap(), &*char.name, &action).await;
-        // let mut updated_char = response.character.clone();
-        // char = &mut updated_char;
 
         // either resume if you have done enough or if the inventory is full
         if how_many.is_some() {
@@ -80,9 +85,8 @@ pub async fn handle_action_with_cooldown(
                 return response;
             }
         } else {
-            inventory_count = char.get_inventory_count();
-            utils::info(&*char.name, format!("Inventory: {:?}", char.inventory).as_str());
-            if inventory_count == char.inventory_max_items {
+            inventory_count = response.character.get_inventory_count();
+            if inventory_count == response.character.inventory_max_items {
                 return response;
             }
         }
@@ -115,20 +119,18 @@ where
 }
 
 async fn handle_request(request: RequestBuilder, char: &str, action: &Action) -> AllActionResponse {
-    let mut response = request.try_clone().expect("Error cloning")
-        .send().await;
+    let mut response = try_sending_request(&request).await;
 
-    let mut number_of_retry: u8 = 10;
-    while response.is_err() && number_of_retry != 0 {
-        number_of_retry -= 1;
+    let mut number_of_retry_sending_request: u8 = 10;
+    while response.is_err() && number_of_retry_sending_request != 0 {
+        number_of_retry_sending_request -= 1;
         time::sleep(Duration::from_secs(1)).await;
-        response = request.try_clone().expect("Error cloning")
-            .send().await
+        response = try_sending_request(&request).await;
     }
 
     let mut response = response.expect("Error sending request");
 
-    utils::info(char, format!("Calling {} with status: {}", response.url(), response.status()).as_str());
+    utils::info(char, format!("Calling {} resulted with status: {}", response.url(), response.status().as_u16()).as_str());
 
     while action.get_retry_codes().iter().map(|x| x.get_code()).collect::<Vec<u16>>()
         .contains(&response.status().as_u16()) {
@@ -143,8 +145,18 @@ async fn handle_request(request: RequestBuilder, char: &str, action: &Action) ->
         .expect("Error parsing JSON")
         .data;
 
+    info!(char, "[{}] Wait for {}: {}s", char, action, cooldown);
+    time::sleep(Duration::from_secs_f32(cooldown)).await;
     handle_cooldown(char, &action.to_string(), parsed_response.cooldown).await;
 
     parsed_response
+}
+
+async fn try_sending_request(request: &RequestBuilder) -> Result<Response, Error> {
+    request
+        .try_clone()
+        .expect("Error cloning")
+        .send()
+        .await
 }
 
