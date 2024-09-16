@@ -18,8 +18,8 @@ struct Data {
     characters_online: u32,
     server_time: DateTime<Utc>,
     announcements: Vec<Announcement>,
-    // last_wipe: String,
-    // next_wipe: String,
+    last_wipe: String,
+    next_wipe: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,9 +45,11 @@ pub async fn get_status(server: &Server) -> Data {
             response.data.characters_online,
             response.data.max_level
     );
+    info!("Wipes: last: {}, next: {}", response.data.last_wipe, response.data.next_wipe);
     for announcement in response.data.announcements.iter() {
-        info!("Announcement: {}",announcement.message);
+        info!("Announcement [{}]: {}", announcement.created_at,announcement.message);
     }
+    //todo
     info!("Server time: {}", response.data.server_time);
 
     response.data
