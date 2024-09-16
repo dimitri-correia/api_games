@@ -14,7 +14,7 @@ use tracing::{event, info, span, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() {
     setup_logs();
 
     info!("Starting the bot");
@@ -49,8 +49,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for handle in handles {
         handle.await.unwrap_or(());
     }
-
-    Ok(())
 }
 
 pub fn setup_logs() {
