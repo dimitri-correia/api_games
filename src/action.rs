@@ -1,18 +1,25 @@
 pub mod bank;
 pub mod movement;
+pub mod equipment;
 
+use crate::action::bank::ErrorBank;
 use crate::character::CharacterData;
+use crate::gameinfo::GameInfo;
+use crate::server::creation::RequestMethod::POST;
 use crate::server::responsecode::ResponseCode;
-use crate::server::RequestMethod::POST;
-use crate::server::Server;
-use crate::utils;
-use crate::utils::handle_cooldown;
+use log::info;
 use reqwest::{Error, RequestBuilder, Response};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
+use std::sync::Arc;
 use std::time::Duration;
 use std::vec;
 use tokio::time;
+
+pub enum ErrorAction {
+    ErrorParsingResponse,
+    ErrorSendingRequest,
+}
 
 #[derive(Clone, Copy)]
 pub enum Action {
@@ -44,50 +51,55 @@ impl Action {
         }
     }
 
-    fn get_retry_codes(&self) -> Vec<ResponseCode> {
+    fn get_retry_codes(&self) -> Vec<u16> {
         let mut codes = match self {
             Action::BankDeposit => vec![ResponseCode::TransactionInProgress461],
             _ => Vec::new(),
         };
         codes.push(ResponseCode::Cooldown499);
-        codes
+        codes.iter().map(|x| x.get_code()).collect::<Vec<u16>>()
     }
 }
 
 pub async fn handle_action_with_cooldown(
-    server: &Server,
+    game_info: Arc<GameInfo>,
     action: Action,
-    char: &CharacterData,
+    mut char: &mut CharacterData,
     mut how_many: Option<u32>,
     json: Option<&Value>,
-) -> AllActionResponse {
-    let request = server
-        .create_request(POST, format!("my/{}/action/{}", char.name, action.to_string()), json, None);
-
-    let mut response;
-    let mut inventory_count = char.get_inventory_count();
+) -> Result<(), ErrorAction> {
+    let request = game_info.server
+        .create_request(
+            POST,
+            format!("my/{}/action/{}", char.name, action.to_string()),
+            json,
+            None,
+        );
 
     // Loop through the calls
     loop {
         if let Some(how_many) = how_many {
-            utils::info(&*char.name, format!("Remaining calls of {}: {}", action.to_string(), how_many).as_str());
+            info!("Remaining calls of {}: {}", action.to_string(), how_many);
         } else {
-            utils::info(&*char.name, format!("Inventory {}/{}", inventory_count, response.character.inventory_max_items).as_str());
+            info!("Inventory {}/{}", char.get_inventory_count(), char.inventory_max_items);
         }
 
         // Make the request and handle cooldown
-        response = handle_request(request.try_clone().unwrap(), &*char.name, &action).await;
+        handle_request(
+            request.try_clone().unwrap(),
+            char,
+            &action,
+        ).await?;
 
-        // either resume if you have done enough or if the inventory is full
+        // Check if we need to stop
         if how_many.is_some() {
             how_many = Some(how_many.unwrap() - 1);
             if how_many == Some(0) {
-                return response;
+                return Ok(());
             }
         } else {
-            inventory_count = response.character.get_inventory_count();
-            if inventory_count == response.character.inventory_max_items {
-                return response;
+            if char.get_inventory_count() == char.inventory_max_items {
+                return Ok(());
             }
         }
     }
@@ -118,38 +130,47 @@ where
     Ok(Cooldown::deserialize(deserializer)?.remaining_seconds)
 }
 
-async fn handle_request(request: RequestBuilder, char: &str, action: &Action) -> AllActionResponse {
+async fn handle_request(
+    request: RequestBuilder,
+    mut char: &mut CharacterData,
+    action: &Action,
+) -> Result<(), ErrorAction> {
+    let mut response = send_request_with_exponential_backoff(&request).await?;
+
+    info!("Calling {} resulted with status: {}", response.url(), response.status().as_u16());
+
+    while action.get_retry_codes().contains(&response.status().as_u16()) {
+        info!("Retrying action due to status: {}", response.status().as_u16());
+        response = send_request_with_exponential_backoff(&request).await?;
+    }
+
+    let mut parsed_response = response
+        .json::<ActionResponse>()
+        .await
+        .map_err(|_| ErrorAction::ErrorParsingResponse)?
+        .data;
+
+    let cooldown = parsed_response.cooldown;
+    info!("Wait for {}: {}s", action, cooldown);
+    time::sleep(Duration::from_secs_f32(cooldown)).await;
+
+    char = &mut parsed_response.character;
+
+    Ok(())
+}
+
+async fn send_request_with_exponential_backoff(request: &RequestBuilder) -> Result<Response, ErrorAction> {
     let mut response = try_sending_request(&request).await;
 
     let mut number_of_retry_sending_request: u8 = 10;
+    let mut backoff_duration = Duration::from_secs(1);
     while response.is_err() && number_of_retry_sending_request != 0 {
         number_of_retry_sending_request -= 1;
-        time::sleep(Duration::from_secs(1)).await;
+        time::sleep(backoff_duration).await;
+        backoff_duration *= 2; // Exponential backoff
         response = try_sending_request(&request).await;
     }
-
-    let mut response = response.expect("Error sending request");
-
-    utils::info(char, format!("Calling {} resulted with status: {}", response.url(), response.status().as_u16()).as_str());
-
-    while action.get_retry_codes().iter().map(|x| x.get_code()).collect::<Vec<u16>>()
-        .contains(&response.status().as_u16()) {
-        utils::info(char, format!("Retrying action due to status: {}", response.status()).as_str());
-        response = request.try_clone().expect("Error cloning")
-            .send().await.expect("Error sending request");
-    }
-
-    let parsed_response = response
-        .json::<ActionResponse>()
-        .await
-        .expect("Error parsing JSON")
-        .data;
-
-    info!(char, "[{}] Wait for {}: {}s", char, action, cooldown);
-    time::sleep(Duration::from_secs_f32(cooldown)).await;
-    handle_cooldown(char, &action.to_string(), parsed_response.cooldown).await;
-
-    parsed_response
+    response.map_err(|_| ErrorAction::ErrorSendingRequest)
 }
 
 async fn try_sending_request(request: &RequestBuilder) -> Result<Response, Error> {
