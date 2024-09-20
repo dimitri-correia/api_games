@@ -15,6 +15,7 @@ use tracing::{error, info};
 pub enum ErrorBank {
     NotEnoughGoldInBank,
     NotEnoughPlaceInBank,
+    NotEnoughPlaceInInventory,
     NotInInventory,
     NotEnoughItemInBank,
     ItemNotFoundInBank,
@@ -190,6 +191,12 @@ impl Bank {
         if item_is_in_bank.unwrap().quantity < qtt {
             error!("Not enough item {} in bank", item_code);
             return Err(ErrorBank::NotEnoughItemInBank);
+        }
+
+        // check if enough place in inventory
+        if char.get_inventory_count() + qtt > char.inventory_max_items {
+            error!("Not enough place in inventory");
+            return Err(ErrorBank::NotEnoughPlaceInInventory);
         }
 
         movement::move_to(&self.game_info, &mut char, movement::Place::Bank).await;
