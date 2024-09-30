@@ -1,4 +1,6 @@
-use crate::action::equipment::ErrorEquipment::{EmptySlot, ItemNotInInventory, NotEnoughPlaceInInventory};
+use crate::action::equipment::ErrorEquipment::{
+    EmptySlot, ItemNotInInventory, NotEnoughPlaceInInventory,
+};
 use crate::action::{handle_action_with_cooldown, Action, ErrorAction};
 use crate::character::CharacterData;
 use crate::gameinfo::GameInfo;
@@ -24,13 +26,6 @@ pub enum SlotType {
     Consumable2,
 }
 
-pub enum ErrorEquipment {
-    ErrorAction(ErrorAction),
-    NotEnoughPlaceInInventory,
-    ItemNotInInventory,
-    EmptySlot,
-}
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct InventoryItemToEquip {
     pub slot: SlotType,
@@ -40,10 +35,7 @@ pub struct InventoryItemToEquip {
 
 impl InventoryItemToEquip {
     pub fn to_unequip(&self) -> InventoryItemToUnEquip {
-        InventoryItemToUnEquip {
-            slot,
-            quantity,
-        }
+        InventoryItemToUnEquip { slot, quantity }
     }
 }
 
@@ -59,9 +51,13 @@ pub async fn equip(
     item: InventoryItemToEquip,
 ) -> Result<(), ErrorEquipment> {
     // check that the item is in the inventory
-    if !character.inventory
-        .iter().map(|item| item.code).collect::<Vec<String>>()
-        .contains(&item.code) {
+    if !character
+        .inventory
+        .iter()
+        .map(|item| item.code)
+        .collect::<Vec<String>>()
+        .contains(&item.code)
+    {
         return Err(ItemNotInInventory);
     }
 
@@ -75,7 +71,9 @@ pub async fn equip(
         &mut character,
         Some(1),
         Some(&json!(item)),
-    ).await.map_err(|e| ErrorEquipment::ErrorAction(e))
+    )
+    .await
+    .map_err(|e| ErrorEquipment::ErrorAction(e))
 }
 
 pub async fn un_equip(
@@ -100,6 +98,7 @@ pub async fn un_equip(
         &mut character,
         Some(1),
         Some(&json!(item)),
-    ).await.map_err(|e| ErrorEquipment::ErrorAction(e))
+    )
+    .await
+    .map_err(|e| ErrorEquipment::ErrorAction(e))
 }
-

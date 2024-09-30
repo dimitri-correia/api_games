@@ -1,42 +1,37 @@
-use crate::server::RequestMethod::GET;
-use crate::server::Server;
+use crate::gameinfo::map::Content;
+use crate::server::creation::RequestMethod::GET;
+use crate::server::creation::Server;
 use serde::Deserialize;
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug, Clone)]
-struct Content {
-    pub r#type: String,
-    pub code: String,
-}
-
-#[derive(Deserialize, Debug, Clone)]
 pub struct Map {
     pub name: String,
-    pub skin: String,
+    // pub skin: String,
     pub x: u32,
     pub y: u32,
     pub content: Content,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct MapItem {
+pub struct EventMapItem {
     pub name: String,
     pub map: Map,
-    pub previous_skin: String,
+    // pub previous_skin: String,
     pub duration: u32,
     pub expiration: String,
     pub created_at: String,
 }
 
 #[derive(Deserialize, Debug)]
-struct MapPage {
-    pub data: Vec<MapItem>,
+struct EventPage {
+    pub data: Vec<EventMapItem>,
     pub pages: usize,
 }
 
-async fn get_all_maps(server: &Server) -> Vec<MapItem> {
+pub async fn get_all_maps_with_events(server: &Server) -> Vec<EventMapItem> {
     let mut page = 1;
-    let mut all_data = Vec::new();
+    let mut all_data: Vec<EventMapItem> = Vec::new();
 
     // Collect all map data from the API
     loop {
@@ -45,11 +40,13 @@ async fn get_all_maps(server: &Server) -> Vec<MapItem> {
         let p = page.to_string();
         params.insert("page", &*p);
 
-        let response = server.create_request(GET, "maps".to_string(), None, Some(params))
+        let response = server
+            .create_request(GET, "events".to_string(), None, Some(params))
             .send()
-            .await.expect("Error sending request");
+            .await
+            .expect("Error sending request");
 
-        let map_page: MapPage = response.json().await.expect("Error parsing JSON");
+        let map_page: EventPage = response.json().await.expect("Error parsing JSON");
 
         // Collect all data
         all_data.extend(map_page.data);
@@ -62,5 +59,6 @@ async fn get_all_maps(server: &Server) -> Vec<MapItem> {
         // Move to the next page
         page += 1;
     }
+
     all_data
 }

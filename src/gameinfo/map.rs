@@ -1,3 +1,4 @@
+use crate::gameinfo::GameInfo;
 use crate::server::RequestMethod::GET;
 use crate::server::Server;
 use serde::Deserialize;
@@ -17,8 +18,8 @@ struct MapEntry {
     content: Option<Content>,
 }
 
-#[derive(Deserialize, Debug)]
-struct Content {
+#[derive(Deserialize, Debug, Clone)]
+pub struct Content {
     #[serde(rename = "type")]
     content_type: String,
     code: String,
@@ -46,7 +47,7 @@ pub struct Map {
     pub tasks_master: HashMap<String, Vec<Position>>,
 }
 
-pub async fn generate_map(server: &Arc<Server>) -> Map {
+pub async fn generate_map(server: &Server) -> Map {
     let all_data = collect_from_api(&*server).await;
 
     // Filter and classify entries into respective categories
@@ -59,26 +60,46 @@ pub async fn generate_map(server: &Arc<Server>) -> Map {
 
     for entry in all_data {
         if let Some(content) = entry.content {
-            let position = Position { x: entry.x, y: entry.y };
+            let position = Position {
+                x: entry.x,
+                y: entry.y,
+            };
 
             match content.content_type.as_str() {
                 "monster" => {
-                    monster.entry(content.code).or_insert_with(Vec::new).push(position);
+                    monster
+                        .entry(content.code)
+                        .or_insert_with(Vec::new)
+                        .push(position);
                 }
                 "resource" => {
-                    resource.entry(content.code).or_insert_with(Vec::new).push(position);
+                    resource
+                        .entry(content.code)
+                        .or_insert_with(Vec::new)
+                        .push(position);
                 }
                 "workshop" => {
-                    workshop.entry(content.code).or_insert_with(Vec::new).push(position);
+                    workshop
+                        .entry(content.code)
+                        .or_insert_with(Vec::new)
+                        .push(position);
                 }
                 "bank" => {
-                    bank.entry(content.code).or_insert_with(Vec::new).push(position);
+                    bank.entry(content.code)
+                        .or_insert_with(Vec::new)
+                        .push(position);
                 }
                 "grand_exchange" => {
-                    grand_exchange.entry(content.code).or_insert_with(Vec::new).push(position);
+                    grand_exchange
+                        .entry(content.code)
+                        .or_insert_with(Vec::new)
+                        .push(position);
                 }
                 "tasks_master" => {
-                    tasks_master.entry(content.code).or_insert_with(Vec::new).push(position);
+                    tasks_master
+                        .entry(content.code)
+                        .or_insert_with(Vec::new)
+                        .push(position);
                 }
                 _ => {
                     unreachable!("Unknown content type: {}", content.content_type);
@@ -98,7 +119,7 @@ pub async fn generate_map(server: &Arc<Server>) -> Map {
     }
 }
 
-async fn collect_from_api(server: &Server) -> Vec<MapEntry> {
+async fn collect_from_api(game_info: &Arc<GameInfo>) -> Vec<MapEntry> {
     let mut page = 1;
     let mut all_data = Vec::new();
 
@@ -109,9 +130,12 @@ async fn collect_from_api(server: &Server) -> Vec<MapEntry> {
         let p = page.to_string();
         params.insert("page", &*p);
 
-        let response = server.create_request(GET, "maps".to_string(), None, Some(params))
+        let response = game_info
+            .server
+            .create_request(GET, "maps".to_string(), None, Some(params))
             .send()
-            .await.expect("Error sending request");
+            .await
+            .expect("Error sending request");
 
         let map_data: MapData = response.json().await.expect("Error parsing JSON");
 

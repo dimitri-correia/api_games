@@ -1,12 +1,11 @@
 mod action;
-mod server;
-mod task;
 mod character;
-mod bank;
-mod movement;
-mod routines;
+mod errors;
 mod events;
 mod gameinfo;
+mod routines;
+mod server;
+mod task;
 
 use std::error::Error;
 use std::sync::Arc;
@@ -55,6 +54,5 @@ pub fn setup_logs() {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Failed to set tracing subscriber");
+    tracing::subscriber::set_global_default(subscriber).expect("Failed to set tracing subscriber");
 }

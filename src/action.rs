@@ -1,11 +1,13 @@
 pub mod bank;
-pub mod movement;
 pub mod equipment;
+pub mod fight;
+pub mod movement;
 
 use crate::action::bank::ErrorBank;
 use crate::character::CharacterData;
 use crate::gameinfo::GameInfo;
 use crate::server::creation::RequestMethod::POST;
+use crate::server::request::{send_request_with_exponential_backoff, ErrorRequest};
 use crate::server::responsecode::ResponseCode;
 use log::info;
 use reqwest::{Error, RequestBuilder, Response};
@@ -15,11 +17,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::vec;
 use tokio::time;
-
-pub enum ErrorAction {
-    ErrorParsingResponse,
-    ErrorSendingRequest,
-}
 
 #[derive(Clone, Copy)]
 pub enum Action {
@@ -62,34 +59,33 @@ impl Action {
 }
 
 pub async fn handle_action_with_cooldown(
-    game_info: Arc<GameInfo>,
+    game_info: &Arc<GameInfo>,
     action: Action,
     mut char: &mut CharacterData,
     mut how_many: Option<u32>,
     json: Option<&Value>,
 ) -> Result<(), ErrorAction> {
-    let request = game_info.server
-        .create_request(
-            POST,
-            format!("my/{}/action/{}", char.name, action.to_string()),
-            json,
-            None,
-        );
+    let request = game_info.server.create_request(
+        POST,
+        format!("my/{}/action/{}", char.name, action.to_string()),
+        json,
+        None,
+    );
 
     // Loop through the calls
     loop {
         if let Some(how_many) = how_many {
             info!("Remaining calls of {}: {}", action.to_string(), how_many);
         } else {
-            info!("Inventory {}/{}", char.get_inventory_count(), char.inventory_max_items);
+            info!(
+                "Inventory {}/{}",
+                char.get_inventory_count(),
+                char.inventory_max_items
+            );
         }
 
         // Make the request and handle cooldown
-        handle_request(
-            request.try_clone().unwrap(),
-            char,
-            &action,
-        ).await?;
+        handle_request(request.try_clone().unwrap(), char, &action).await?;
 
         // Check if we need to stop
         if how_many.is_some() {
@@ -104,7 +100,6 @@ pub async fn handle_action_with_cooldown(
         }
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 struct ActionResponse {
@@ -135,12 +130,24 @@ async fn handle_request(
     mut char: &mut CharacterData,
     action: &Action,
 ) -> Result<(), ErrorAction> {
-    let mut response = send_request_with_exponential_backoff(&request).await?;
+    let mut response = send_request_with_exponential_backoff(&request)
+        .await
+        .map_err(|e| ErrorAction::ErrorRequest(e))?;
 
-    info!("Calling {} resulted with status: {}", response.url(), response.status().as_u16());
+    info!(
+        "Calling {} resulted with status: {}",
+        response.url(),
+        response.status().as_u16()
+    );
 
-    while action.get_retry_codes().contains(&response.status().as_u16()) {
-        info!("Retrying action due to status: {}", response.status().as_u16());
+    while action
+        .get_retry_codes()
+        .contains(&response.status().as_u16())
+    {
+        info!(
+            "Retrying action due to status: {}",
+            response.status().as_u16()
+        );
         response = send_request_with_exponential_backoff(&request).await?;
     }
 
@@ -158,26 +165,3 @@ async fn handle_request(
 
     Ok(())
 }
-
-async fn send_request_with_exponential_backoff(request: &RequestBuilder) -> Result<Response, ErrorAction> {
-    let mut response = try_sending_request(&request).await;
-
-    let mut number_of_retry_sending_request: u8 = 10;
-    let mut backoff_duration = Duration::from_secs(1);
-    while response.is_err() && number_of_retry_sending_request != 0 {
-        number_of_retry_sending_request -= 1;
-        time::sleep(backoff_duration).await;
-        backoff_duration *= 2; // Exponential backoff
-        response = try_sending_request(&request).await;
-    }
-    response.map_err(|_| ErrorAction::ErrorSendingRequest)
-}
-
-async fn try_sending_request(request: &RequestBuilder) -> Result<Response, Error> {
-    request
-        .try_clone()
-        .expect("Error cloning")
-        .send()
-        .await
-}
-

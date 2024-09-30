@@ -1,5 +1,5 @@
-use crate::server::RequestMethod::GET;
-use crate::server::Server;
+use crate::server::creation::RequestMethod::GET;
+use crate::server::creation::Server;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,7 +10,8 @@ pub struct Effect {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct CraftItem {
+pub struct Item {
+    pub slot: Option<u8>,
     pub code: String,
     pub quantity: u32,
 }
@@ -19,12 +20,12 @@ pub struct CraftItem {
 pub struct Craft {
     pub skill: String,
     pub level: u32,
-    pub items: Vec<CraftItem>,
+    pub items: Vec<Item>,
     pub quantity: u32,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct Item {
+pub struct ItemInfo {
     pub name: String,
     pub code: String,
     pub level: u32,
@@ -37,11 +38,11 @@ pub struct Item {
 
 #[derive(Deserialize, Debug)]
 pub struct ItemPage {
-    pub data: Vec<Item>,
+    pub data: Vec<ItemInfo>,
     pub pages: usize,
 }
 
-pub async fn get_all_items(server: &Server) -> Vec<Item> {
+pub async fn get_all_items(server: &Server) -> Vec<ItemInfo> {
     let mut page = 1;
     let mut all_data = Vec::new();
 
@@ -52,9 +53,11 @@ pub async fn get_all_items(server: &Server) -> Vec<Item> {
         let p = page.to_string();
         params.insert("page", &*p);
 
-        let response = server.create_request(GET, "items".to_string(), None, Some(params))
+        let response = server
+            .create_request(GET, "items".to_string(), None, Some(params))
             .send()
-            .await.expect("Error sending request");
+            .await
+            .expect("Error sending request");
 
         let item_page: ItemPage = response.json().await.expect("Error parsing JSON");
 

@@ -1,6 +1,7 @@
+use crate::action::movement;
 use crate::action::{handle_action_with_cooldown, Action};
-use crate::action::{movement, ErrorAction};
 use crate::character::CharacterData;
+use crate::errors::ErrorBank;
 use crate::gameinfo::items::Item;
 use crate::gameinfo::GameInfo;
 use crate::server::creation::RequestMethod::GET;
@@ -8,21 +9,10 @@ use crate::server::request::send_request_with_exponential_backoff;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
-use std::hint::black_box;
 use std::sync::Arc;
 use tracing::{error, info};
 
-pub enum ErrorBank {
-    NotEnoughGoldInBank,
-    NotEnoughPlaceInBank,
-    NotEnoughPlaceInInventory,
-    NotInInventory,
-    NotEnoughItemInBank,
-    ItemNotFoundInBank,
-    ErrorAction(ErrorAction),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Bank {
     pub info: BankInfo,
     pub content: Vec<Item>,
@@ -52,7 +42,8 @@ impl Bank {
     }
 
     async fn can_store_item(&self, item_code: &str) -> bool {
-        let is_already_in_bank = self.content
+        let is_already_in_bank = self
+            .content
             .iter()
             .find(|bank_item| bank_item.code == item_code);
 
@@ -77,12 +68,11 @@ impl Bank {
         mut char: &mut CharacterData,
         quantity: Option<u32>,
     ) -> Result<(), ErrorBank> {
-        let quantity =
-            if quantity.is_some() && char.gold >= quantity.unwrap() {
-                quantity.unwrap()
-            } else {
-                char.gold
-            };
+        let quantity = if quantity.is_some() && char.gold >= quantity.unwrap() {
+            quantity.unwrap()
+        } else {
+            char.gold
+        };
 
         if quantity == 0 {
             info!("No gold to deposit");
@@ -91,7 +81,13 @@ impl Bank {
             info!("Depositing gold: {}", quantity);
         }
 
-        movement::move_to(&self.game_info, &mut char, movement::Place::Bank).await;
+        if movement::move_to(&self.game_info, &mut char, movement::Place::Bank)
+            .await
+            .is_err()
+            && self.game_info.map.bank.contains_key()
+        {
+            return Err(ErrorBank::ErrorAction(ErrorAction::ErrorMoving));
+        };
 
         handle_action_with_cooldown(
             &self.game_info,
@@ -99,7 +95,9 @@ impl Bank {
             &mut char,
             Some(1),
             Some(&json!(quantity)),
-        ).await.map_err(|e| ErrorBank::ErrorAction(e))
+        )
+        .await
+        .map_err(|e| ErrorBank::ErrorAction(e))
     }
 
     async fn deposit_item(
@@ -113,9 +111,7 @@ impl Bank {
             return Err(ErrorBank::NotEnoughPlaceInBank);
         }
 
-        let items_in_inventory = char.inventory
-            .iter()
-            .find(|item| item.code == item_code);
+        let items_in_inventory = char.inventory.iter().find(|item| item.code == item_code);
 
         if items_in_inventory.is_none() {
             error!("Item {} not found in inventory", item_code);
@@ -147,7 +143,9 @@ impl Bank {
             &mut char,
             Some(1),
             Some(&json!(item)),
-        ).await.map_err(|e| ErrorBank::ErrorAction(e))
+        )
+        .await
+        .map_err(|e| ErrorBank::ErrorAction(e))
     }
 
     pub async fn deposit_all_items_and_gold(
@@ -179,7 +177,8 @@ impl Bank {
         item_code: &str,
         qtt: u32,
     ) -> Result<(), ErrorBank> {
-        let item_is_in_bank = self.content
+        let item_is_in_bank = self
+            .content
             .iter()
             .find(|bank_item| bank_item.code == item_code);
 
@@ -213,7 +212,9 @@ impl Bank {
             &mut char,
             Some(1),
             item,
-        ).await.map_err(|e| ErrorBank::ErrorAction(e))
+        )
+        .await
+        .map_err(|e| ErrorBank::ErrorAction(e))
     }
 
     pub async fn withdraw_gold(
@@ -234,10 +235,11 @@ impl Bank {
             &mut char,
             Some(1),
             Some(&json!(quantity)),
-        ).await.map_err(|e| ErrorBank::ErrorAction(e))
+        )
+        .await
+        .map_err(|e| ErrorBank::ErrorAction(e))
     }
 }
-
 
 #[derive(Deserialize, Debug)]
 struct BankPage {
@@ -256,14 +258,18 @@ async fn get_all_items_in_bank(game_info: &Arc<GameInfo>) -> Result<Vec<Item>, E
         let p = page.to_string();
         params.insert("page", &*p);
 
-        let request = game_info.server
-            .create_request(GET, "my/bank/items".to_string(), None, Some(params));
+        let request =
+            game_info
+                .server
+                .create_request(GET, "my/bank/items".to_string(), None, Some(params));
 
         let response = send_request_with_exponential_backoff(&request)
             .await
             .map_err(|e| ErrorBank::ErrorAction(ErrorAction::ErrorRequest(e)))?;
 
-        let bank_items: BankPage = response.json().await
+        let bank_items: BankPage = response
+            .json()
+            .await
             .map_err(|_| ErrorBank::ErrorAction(ErrorAction::ErrorParsingResponse))?;
 
         // Collect all data
@@ -286,14 +292,17 @@ struct BankInfoResponse {
 }
 
 async fn get_bank_details(game_info: &Arc<GameInfo>) -> Result<BankInfo, ErrorBank> {
-    let request = game_info.server
+    let request = game_info
+        .server
         .create_request(GET, "my/bank".to_string(), None, None);
 
     let response = send_request_with_exponential_backoff(&request)
         .await
         .map_err(|e| ErrorBank::ErrorAction(ErrorAction::ErrorRequest(e)))?;
 
-    let bank_infos: BankInfoResponse = response.json().await
+    let bank_infos: BankInfoResponse = response
+        .json()
+        .await
         .map_err(|_| ErrorBank::ErrorAction(ErrorAction::ErrorParsingResponse))?;
 
     Ok(bank_infos.data)

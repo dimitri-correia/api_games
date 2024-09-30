@@ -1,13 +1,10 @@
-use crate::server::RequestMethod::GET;
-use crate::server::Server;
+use crate::action::equipment::SlotType;
+use crate::action::fight::AttackStats;
+use crate::gameinfo::items::Item;
+use crate::gameinfo::map::Position;
+use crate::server::creation::RequestMethod::GET;
+use crate::server::creation::Server;
 use serde::Deserialize;
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct InventoryItem {
-    // pub slot: u8,
-    pub code: String,
-    pub quantity: u32,
-}
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct CharacterData {
@@ -17,7 +14,7 @@ pub struct CharacterData {
     xp: u32,
     max_xp: u32,
     achievements_points: u32,
-    gold: u32,
+    pub gold: u32,
     speed: u32,
     pub mining_level: u32,
     // mining_xp: u32,
@@ -52,14 +49,14 @@ pub struct CharacterData {
     dmg_earth: u32,
     dmg_water: u32,
     dmg_air: u32,
-    res_fire: u32,
-    res_earth: u32,
-    res_water: u32,
-    res_air: u32,
-    pub x: i32,
-    pub y: i32,
+    res_fire: i32,
+    res_earth: i32,
+    res_water: i32,
+    res_air: i32,
+    x: i32,
+    y: i32,
     cooldown: u32,
-    pub cooldown_expiration: String,
+    cooldown_expiration: String,
     weapon_slot: String,
     shield_slot: String,
     helmet_slot: String,
@@ -81,7 +78,27 @@ pub struct CharacterData {
     task_progress: u32,
     task_total: u32,
     pub inventory_max_items: u32,
-    pub inventory: Vec<InventoryItem>,
+    pub inventory: Vec<Item>,
+}
+
+impl CharacterData {
+    pub fn get_attack_stats(&self) -> AttackStats {
+        AttackStats {
+            hp: self.hp,
+            attack_fire: self.attack_fire,
+            attack_earth: self.attack_earth,
+            attack_water: self.attack_water,
+            attack_air: self.attack_air,
+            res_fire: self.res_fire,
+            res_earth: self.res_earth,
+            res_water: self.res_water,
+            res_air: self.res_air,
+            dmg_fire: Some(self.dmg_fire),
+            dmg_earth: Some(self.dmg_earth),
+            dmg_water: Some(self.dmg_water),
+            dmg_air: Some(self.dmg_air),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -120,9 +137,32 @@ pub async fn get_all_chars_infos(server: &Server) -> Vec<CharacterData> {
 
 impl CharacterData {
     pub fn get_inventory_count(&self) -> u32 {
-        self.inventory
-            .iter()
-            .map(|item| item.quantity)
-            .sum()
+        self.inventory.iter().map(|item| item.quantity).sum()
+    }
+
+    pub fn get_current_position(&self) -> Position {
+        Position {
+            x: self.x,
+            y: self.y,
+        }
+    }
+
+    pub fn get_equipment(&self, slot_type: &SlotType) -> String {
+        match slot_type {
+            SlotType::Weapon => self.weapon_slot.clone(),
+            SlotType::Shield => self.shield_slot.clone(),
+            SlotType::Helmet => self.helmet_slot.clone(),
+            SlotType::BodyArmor => self.body_armor_slot.clone(),
+            SlotType::LegArmor => self.leg_armor_slot.clone(),
+            SlotType::Boots => self.boots_slot.clone(),
+            SlotType::Ring1 => self.ring1_slot.clone(),
+            SlotType::Ring2 => self.ring2_slot.clone(),
+            SlotType::Amulet => self.amulet_slot.clone(),
+            SlotType::Artifact1 => self.artifact1_slot.clone(),
+            SlotType::Artifact2 => self.artifact2_slot.clone(),
+            SlotType::Artifact3 => self.artifact3_slot.clone(),
+            SlotType::Consumable1 => self.consumable1_slot.clone(),
+            SlotType::Consumable2 => self.consumable2_slot.clone(),
+        }
     }
 }

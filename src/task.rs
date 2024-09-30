@@ -1,3 +1,5 @@
+use crate::gameinfo::GameInfo;
+use crate::server::creation::RequestMethod::POST;
 use crate::server::RequestMethod::POST;
 use crate::server::Server;
 use crate::utils;
@@ -18,12 +20,26 @@ fn get_task_name(task: Task) -> &'static str {
         Task::Exchange => "exchange",
     }
 }
-pub async fn handle_task(server: &Server, char: &str, task: Task) -> Result<(), Box<dyn Error>> {
-    let response = server.create_request(POST, format!("my/{}/action/task/{}", char, get_task_name(task)), None, None)
+pub async fn handle_task(
+    game_info: &GameInfo,
+    char: &str,
+    task: Task,
+) -> Result<(), Box<dyn Error>> {
+    let response = game_info
+        .server
+        .create_request(
+            POST,
+            format!("my/{}/action/task/{}", char, get_task_name(task)),
+            None,
+            None,
+        )
         .send()
         .await?;
 
-    utils::info(char, format!("Task response: {}", response.text().await?).as_str());
+    info(
+        char,
+        format!("Task response: {}", response.text().await?).as_str(),
+    );
 
     Ok(())
 }
